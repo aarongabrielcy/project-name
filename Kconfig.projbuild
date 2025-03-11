@@ -1,0 +1,3 @@
+config PROJECT_VERSION
+    string "Project Version"
+    default "1.0.0"
