@@ -3,6 +3,7 @@
 #include "trackerData.h"
 #include "moduleData.h"
 #include "pwManager.h"
+#include "serviceInfo.h"
 #include "esp_log.h"
 #include "driver/uart.h"
 #include "freertos/FreeRTOS.h"
@@ -20,6 +21,8 @@ char longitud[20];
 bool ignition;
 char date_time[34];
 char* dev_id;
+bool redService = false;
+bool sendData = true;
 static void uart_task(void *arg) {
     char response[256];
     char message[256];
@@ -28,13 +31,7 @@ static void uart_task(void *arg) {
         if (len > 0) {
             ESP_LOGI(TAG, "Evento UART: %s", response);
   
-                /*if (strchr(response, '>') != NULL) {
-                    ESP_LOGI(TAG, "Recibido '>', enviando datos GNSS...");
-                    //network_sendData(gnssData);
-                    sim7600_sendATCommand(message);
-                    waitingForPrompt = 0;
-                }
-                else*/ if (strstr(response, "+CGNSSINFO:") != NULL) {
+                if (strstr(response, "+CGNSSINFO:") != NULL) {
                     ESP_LOGI(TAG, "Evento GNSS detectado.");
                     parseGPS(response);
                                         
@@ -45,19 +42,20 @@ static void uart_task(void *arg) {
                     ESP_LOGI(TAG, "Lon=> %s", longitud); 
 
                     ignition = !power_get_ignition_state();
+                    power_blink_gnss_led(1);
                     if(tkr.fix) {
                         snprintf(date_time, sizeof(date_time), "%s;%s", formatDate(tkr.date), formatTime(tkr.utctime));
-                        power_blink_gnss_led(tkr.fix);
+                        //power_blink_gnss_led(tkr.fix);
                     }else {
-                        ESP_LOGI(TAG, "dateTime del modulo SIM");
+                        //ESP_LOGI(TAG, "dateTime del modulo SIM");
                         if(uartManager_sendReadUart("AT+CCLK?") ){
                         }
-                        power_blink_gnss_led(tkr.fix);   
+                        //power_blink_gnss_led(tkr.fix);   
                     }
                     ESP_LOGI(TAG, "Enviando datos GNSS ->date time: %s Lat: %s, Lon: %s, Velocidad: %.2f, Fix: %d, ign: %d, id: %s", 
                         date_time, latitud, longitud, tkr.speed, tkr.fix, ignition, dev_id);
                     
-                    snprintf(message, sizeof(message), "STT;%s;3FFFFF;95;1.0.21;1;%s;04BB4A02;334;21;3C1F;18;%s;%s;%.2f;%.2f;%d;%d;0000000%d;00000000;1;1;0929;4.1;14.19",formatDevID(dev_id), date_time, latitud, longitud,tkr.speed, tkr.course, tkr.gps_svs, tkr.fix, ignition);
+                    snprintf(message, sizeof(message), "STT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;0000000%d;00000000;1;1;0929;4.1;14.19",formatDevID(dev_id), date_time,serInf.cell_id, serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.rxlvl_rsrp, latitud, longitud,tkr.speed, tkr.course, tkr.gps_svs, tkr.fix, ignition);
 
                     char sendCommand[50];
                     snprintf(sendCommand, sizeof(sendCommand), "AT+CIPSEND=0,%d", (int)strlen(message)); //FORMA EL COMANDO "AT+CIPSEND=0,length"
@@ -66,7 +64,8 @@ static void uart_task(void *arg) {
                     }
                     //sim7600_sendATCommand(sendCommand); 
                     waitingForPrompt = 1;
-                } else if (strstr(response, "+CIPSEND:") != NULL) {
+                }else if (strstr(response, "+CIPSEND:") != NULL) {
+                    sendData = true;
                     ESP_LOGI(TAG, "Envío exitoso!");
                     
                 }else if (strstr(response,"READY") != NULL || strstr(response,"+CPIN:") != NULL) {
@@ -74,14 +73,30 @@ static void uart_task(void *arg) {
                     sim7600_basic_config();
                 }else if(strstr(response, "NO SERVICE") != NULL) {
                     //////////////////////// falta el fix
-
-                    ESP_LOGI(TAG, "guarda candenas con coordenadas en buffer");
+                    ESP_LOGI(TAG, "Sin servicio de red celular");
+                    if(!tkr.fix && !redService) {
+                        ESP_LOGI(TAG, "guarda candenas con coordenadas en buffer");
+                    }
                 }else if(strstr(response, "+IPCLOSE:") != NULL)  {
-                    ESP_LOGI(TAG, "evento de desconexión del servior TCP, reconectando...");
+                    sendData = false;
+                    ESP_LOGI(TAG, "Desconexión del servior TCP ...");
                 }else if(strstr(response, "+CPSI:") != NULL) {
                     /* SI LOS DATOS SE PARSEAN ENTONCES LA CONEXION DE RED CELULAR SE PUEDE ESTABLECER ENTONCES
                        VALIDA SI "SIPSEND ES ERROR ENTONCES CONFIGURA EL SERVIDOR DE NUEVO" */
+                       ESP_LOGI(TAG, "Parseando CPSI...");
+                       
+                       if(parsePSI(response)){
+                            redService = true;
+                            if(redService && !sendData) {
+                                ESP_LOGI(TAG, "restableciendo conexión TCP...");
+                                sim7600_reconnect_tcp();
+                            }
+                       }else {
+                            ESP_LOGI(TAG, "No fué posible parsear CPSI...");
+                            redService = false;
+                       }
                 }else if(strstr(response, "+CIPERROR:") != NULL) {
+                    sendData = false;
                     ///// SI LOS DATOS CPSI SE PARSEAN Y MARCA ESTE ERROR AL MANDAR AL SERVIDOR,  RECONECTA EL SERVIDOR
                 } 
         }
@@ -146,12 +161,12 @@ bool uartManager_sendReadUart(const char *command) {
             return true;  
         }else if(strstr(cleanedResponse, "CCLK") != NULL) {
             char * cleaned_response = cleanATResponse(cleanedResponse);
-            ESP_LOGI(TAG, "Formateando UTC... %s", cleaned_response); 
+            //ESP_LOGI(TAG, "Formateando UTC... %s", cleaned_response); 
             char* result = getFormatUTC(cleaned_response);
             // Copiar el resultado en date_time sin desbordar
             strncpy(date_time, result, sizeof(date_time) - 1);
             // Asegurar terminación nula
-            ESP_LOGI(TAG, "dateTime UTC... %s", result); 
+            //ESP_LOGI(TAG, "dateTime UTC... %s", result); 
             date_time[sizeof(date_time) - 1] = '\0';
         }else if (strstr(cleanedResponse, "OK") != NULL ) { ////////// si validas solo el comando "AT" busca mejor "AT,OK"
             ESP_LOGI(TAG, "Response ends with 'OK', returning true"); 

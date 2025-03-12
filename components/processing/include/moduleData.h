@@ -9,4 +9,10 @@
 
 void parseGPS(char *response);
 //void updateReportRate(int seconds);
+bool parsePSI(char *response);
+void parseGSM(char *tokens);
+void parseLTE(char *tokens);
+void parseWCDMA(char *tokens);
+void parseCDMA(char *tokens);
+void parseEVDO(char *tokens);
 #endif

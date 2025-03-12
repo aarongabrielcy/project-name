@@ -31,12 +31,18 @@ void sim7600_basic_config() {
     sim7600_init("AT+SIMEI?");
     sim7600_init("AT+CGPS=1");
     sim7600_init("AT+CPSI=28");
+    /*El valor del comando debe cambiar sengun el estado de la ignición*/
     sim7600_init("AT+CGNSSINFO=255");
     sim7600_init("AT+NETOPEN");
     sim7600_init("AT+CIPOPEN=0,\"TCP\",\"34.196.135.179\",5200");
     //sim7600_init("ATE0"); //NO REPLICA LOS COMANDOS ENVIADOS EN LAS RESPUESTAS "0"
 }
-
+void sim7600_reconnect_tcp() {
+    /*vuelve boolana la funcion o valida los comandos que se ejecuten validando la respuesta
+    de cada comando o consultalos después de ejecutarlos*/
+    sim7600_init("AT+NETOPEN");
+    sim7600_init("AT+CIPOPEN=0,\"TCP\",\"34.196.135.179\",5200");   
+}
 void sim7600_sendATCommand(const char *command) {
     ESP_LOGI(TAG, "Enviando comando: %s", command);
     uartManager_sendCommand(command);

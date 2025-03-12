@@ -4,7 +4,7 @@
 #include <string.h>
 #include "esp_log.h"
 
-static const char *TAG = "UTILS";
+//static const char *TAG = "UTILS";
 
 char *cleanData(char *response, const char *command) {
     char *prefix = strstr(response, "+");
@@ -103,7 +103,7 @@ char* getFormatUTC(const char* input) {
     static char output[34];  // Suficiente para el formato "YYYYMMDD;HH:MM:SS"
     int year, month, day, hour, minute, second, tz_offset;
     // Registro de entrada
-    ESP_LOGI(TAG, "data formatUTC => %s", input);
+    //ESP_LOGI(TAG, "data formatUTC => %s", input);
     // Extraer los valores, asegurando que tz_offset pueda manejar valores negativos
     if (sscanf(input, "%2d/%2d/%2d,%2d:%2d:%2d%3d", 
                &year, &month, &day, &hour, &minute, &second, &tz_offset) != 7) {
@@ -157,4 +157,16 @@ const char *formatDevID(const char *input) {
     }
     output[10] = '\0'; // Asegurar terminador nulo
     return output;
+}
+char* removeHexPrefix(const char *hexValue) {
+    if (hexValue == NULL) {
+        return NULL;
+    }
+
+    // Verificar si la cadena empieza con "0x" o "0X"
+    if ((hexValue[0] == '0' && (hexValue[1] == 'x' || hexValue[1] == 'X'))) {
+        return strdup(hexValue + 2);  // Crear una copia de la cadena sin "0x"
+    }
+
+    return strdup(hexValue);  // Retornar copia de la cadena original
 }

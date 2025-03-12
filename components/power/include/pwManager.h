@@ -9,7 +9,7 @@
 #define POWER_LED_PIN 20
 #define SIM_DTR_PIN   42
 #define IGNITION_PIN  10
-//#define TIMER_INTERVAL (7 * 60 * 1000) // 30 minutos en milisegundos
+#define TIMER_INTERVAL (3 * 60 * 1000) // 30 minutos en milisegundos
 
 void power_init();
 void power_on_module();

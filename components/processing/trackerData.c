@@ -3,19 +3,12 @@
 
 // Inicializar los valores por defecto
 trackerData_t tkr = {
-    .header = "STT",
-    .imei = "",
     .rep_map = "3FFFFF",
     .model = 99,
     .sw_ver = "1.0.1",
     .msg_type = 1,
     .date = "00000000",
     .utctime = "00:00:00",
-    .cell_id = "00000000",
-    .mcc = 0,
-    .mnc = 0,
-    .lac_tac = "FFFF",
-    .rxlvl_rsrp = 999,
     .lat = 0.0,
     .ns = 'N',
     .lon = 0.0,

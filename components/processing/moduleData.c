@@ -1,13 +1,14 @@
 #include "moduleData.h"
 #include "trackerData.h"
 #include "additionalData.h"
+#include "serviceInfo.h"
 #include "sim7600.h"
 #include "utilities.h"
 #include "esp_log.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
+#include <math.h>
 
 static const char *TAG = "GNSS";
 bool reportFastMode;
@@ -102,5 +103,148 @@ void parseGPS(char *response) {
     printf("Fix: %d\n", tkr.fix);
     printf("---------------------------\n");
 }
+bool parsePSI(char *response) {
+    char *cleanResponse = cleanData(response, "CPSI");
 
+    if (cleanResponse == NULL) {
+        ESP_LOGE(TAG, "Error: No se pudo limpiar la respuesta CPSI.");
+        return false;
+    }
+    // Verificar con qué cabecera comienza la cadena
+    if (strncmp(cleanResponse, "GSM", 3) == 0) {
+        parseGSM(cleanResponse);
+    } else if (strncmp(cleanResponse, "LTE", 3) == 0) {
+        parseLTE(cleanResponse);
+    } else if (strncmp(cleanResponse, "WCDMA", 5) == 0) {
+        parseWCDMA(cleanResponse);
+    } else if (strncmp(cleanResponse, "CDMA", 4) == 0) {
+        parseCDMA(cleanResponse);
+    } else if (strncmp(cleanResponse, "EVDO", 4) == 0) {
+        parseEVDO(cleanResponse);
+    } else {
+        ESP_LOGW(TAG, "Formato de CPSI inválido: %s", cleanResponse);
+        return false;
+    }
+    return true;
+}
+void parseGSM(char *tokens) {
+    char *values[10] = {NULL};  
+    int count = 0;
+    
+    // Separar la cadena en tokens
+    char *token = strtok(tokens, ",");
+    while (token != NULL && count < 10) {
+        values[count++] = token;
+        token = strtok(NULL, ",");
+    }
 
+    if (count < 9) {
+        ESP_LOGE(TAG, "Error: Datos insuficientes en GSM.");
+        return;
+    }
+
+    serInf.mcc = atoi(values[2]);
+    serInf.mnc = atoi(values[2] + 4);
+    strncpy(serInf.lac_tac, removeHexPrefix(values[3]), sizeof(serInf.lac_tac) - 1);
+    strncpy(serInf.cell_id, values[4], sizeof(serInf.cell_id) - 1);
+    serInf.rxlvl_rsrp = atoi(values[6]);
+
+    ESP_LOGI(TAG, "GSM Parseado: MCC:%d, MNC:%d, LAC:%s, CellID:%s, RXLVL:%d",
+             serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);
+}
+
+void parseLTE(char *tokens) {
+    char *values[15] = {NULL};  
+    int count = 0;
+
+    char *token = strtok(tokens, ",");
+    while (token != NULL && count < 15) {
+        values[count++] = token;
+        token = strtok(NULL, ",");
+    }
+
+    if (count < 14) {
+        ESP_LOGE(TAG, "Error: Datos insuficientes en LTE.");
+        return;
+    }
+
+    serInf.mcc = atoi(values[2]);
+    serInf.mnc = atoi(values[2] + 4);
+    strncpy(serInf.lac_tac, removeHexPrefix(values[3]), sizeof(serInf.lac_tac) - 1);
+    strncpy(serInf.cell_id, values[4], sizeof(serInf.cell_id) - 1);
+    serInf.rxlvl_rsrp = atoi(values[11]);
+
+    ESP_LOGI(TAG, "LTE Parseado: MCC:%d, MNC:%d, TAC:%s, CellID:%s, RSRP:%d",
+             serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);
+}
+
+void parseWCDMA(char *tokens) {
+    char *values[15] = {NULL};  
+    int count = 0;
+
+    char *token = strtok(tokens, ",");
+    while (token != NULL && count < 15) {
+        values[count++] = token;
+        token = strtok(NULL, ",");
+    }
+
+    if (count < 14) {
+        ESP_LOGE(TAG, "Error: Datos insuficientes en WCDMA.");
+        return;
+    }
+
+    serInf.mcc = atoi(values[2]);
+    serInf.mnc = atoi(values[2] + 4);
+    strncpy(serInf.lac_tac, removeHexPrefix(values[3]), sizeof(serInf.lac_tac) - 1);
+    strncpy(serInf.cell_id, values[4], sizeof(serInf.cell_id) - 1);
+    serInf.rxlvl_rsrp = atoi(values[12]);
+
+    ESP_LOGI(TAG, "WCDMA Parseado: MCC:%d, MNC:%d, LAC:%s, CellID:%s, RXLVL:%d",
+             serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);
+}
+
+void parseCDMA(char *tokens) {
+    char *values[15] = {NULL};  
+    int count = 0;
+
+    char *token = strtok(tokens, ",");
+    while (token != NULL && count < 15) {
+        values[count++] = token;
+        token = strtok(NULL, ",");
+    }
+
+    if (count < 14) {
+        ESP_LOGE(TAG, "Error: Datos insuficientes en CDMA.");
+        return;
+    }
+
+    serInf.mcc = atoi(values[2]);
+    serInf.mnc = atoi(values[2] + 4);
+    serInf.rxlvl_rsrp = atoi(values[6]);
+
+    ESP_LOGI(TAG, "CDMA Parseado: MCC:%d, MNC:%d, RXLVL:%d",
+             serInf.mcc, serInf.mnc, serInf.rxlvl_rsrp);
+}
+
+void parseEVDO(char *tokens) {
+    char *values[10] = {NULL};  
+    int count = 0;
+
+    char *token = strtok(tokens, ",");
+    while (token != NULL && count < 10) {
+        values[count++] = token;
+        token = strtok(NULL, ",");
+    }
+
+    if (count < 10) {
+        ESP_LOGE(TAG, "Error: Datos insuficientes en EVDO.");
+        return;
+    }
+
+    serInf.mcc = atoi(values[2]);
+    serInf.mnc = atoi(values[2] + 4);
+    serInf.rxlvl_rsrp = atoi(values[5]);
+
+    ESP_LOGI(TAG, "EVDO Parseado: MCC:%d, MNC:%d, RXLVL:%d",
+             serInf.mcc, serInf.mnc, serInf.rxlvl_rsrp);
+}
