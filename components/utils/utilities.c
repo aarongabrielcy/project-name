@@ -4,7 +4,7 @@
 #include <string.h>
 #include "esp_log.h"
 
-//static const char *TAG = "UTILS";
+static const char *TAG = "UTILS";
 
 char *cleanData(char *response, const char *command) {
     char *prefix = strstr(response, "+");
@@ -37,6 +37,7 @@ char* cleanATResponse(const char *input) {
     }
     return cleaned;
 }
+/** modifica esta funcion para que no ponga comas ";" */
 char* cleanResponse(const char *response) {
     char *cleanResponse = (char *)malloc(strlen(response) + 1); // Reservar memoria
     if (cleanResponse == NULL) {
@@ -170,3 +171,103 @@ char* removeHexPrefix(const char *hexValue) {
 
     return strdup(hexValue);  // Retornar copia de la cadena original
 }
+
+/**quita la validacion de las comas cuando le quites a clean respose */
+char* clean(const char* text, const char* word) {
+    char *text_copy = strdup(text);
+    char command_clean[100];
+    strncpy(command_clean, word, sizeof(command_clean) - 1);
+    command_clean[sizeof(command_clean) - 1] = '\0';
+
+    // Eliminar la palabra "word" si se encuentra en cualquier parte del texto
+    char* ok_pos = strstr(text_copy, ",OK");
+    if (ok_pos != NULL) {
+        // Mover la parte posterior de ",OK" hacia el inicio para eliminar ",OK"
+        memmove(ok_pos, ok_pos + 4, strlen(ok_pos + 4) + 1); // 4 porque ",OK" tiene 4 caracteres
+    }
+    char* pos = strstr(text_copy, word);
+    if (pos != NULL) {
+        memmove(pos, pos + strlen(word), strlen(pos + strlen(word)) + 1); // Mover el resto de la cadena
+        char* comma_pos = strchr(text_copy, ',');
+        if (comma_pos != NULL) {
+            memmove(comma_pos, comma_pos + 1, strlen(comma_pos));
+        }
+    }
+    // Eliminar "AT" al inicio si está presente
+    if (strncmp(command_clean, "AT", 2) == 0) {
+        memmove(command_clean, command_clean + 2, strlen(command_clean) - 1);
+    }
+    // Eliminar '?' al final si está presente
+    if (command_clean[strlen(command_clean) - 1] == '?') {
+        command_clean[strlen(command_clean) - 1] = '\0';
+    }
+    strcat(command_clean, ": ");
+    //printf("command format=>%s", command_clean);
+
+    char* pos_cmd = strstr(text_copy, command_clean);
+    if (pos_cmd != NULL) {
+        memmove(pos_cmd, pos_cmd + strlen(command_clean), strlen(pos_cmd + strlen(command_clean)) + 1); // Mover el resto de la cadena
+    }
+    
+    return text_copy; // Retornar la cadena modificada
+}
+/*char *clean(const char *response, const char *command) {
+    if (response == NULL || command == NULL) {
+        return NULL;
+    }
+
+    // Crear una copia de response
+    char *text_copy = strdup(response);
+    if (!text_copy) {
+        ESP_LOGE(TAG, "Error: No se pudo asignar memoria para text_copy");
+        return NULL;
+    }
+
+    // 1. Eliminar "OK"
+    char *last_comma = strrchr(text_copy, ',');
+    if (last_comma && strstr(last_comma, "OK")) {
+        *last_comma = '\0';
+    }
+
+    // 2. Eliminar todas las comas ","
+    char *read_ptr = text_copy, *write_ptr = text_copy;
+    while (*read_ptr) {
+        if (*read_ptr != ',') {
+            *write_ptr++ = *read_ptr;
+        }
+        read_ptr++;
+    }
+    *write_ptr = '\0';
+
+    // 3. Limpiar "command"
+    char *command_clean = strdup(command);
+    if (!command_clean) {
+        free(text_copy);
+        ESP_LOGE(TAG, "Error: No se pudo asignar memoria para command_clean");
+        return NULL;
+    }
+
+    if (strncmp(command_clean, "AT", 2) == 0) {
+        memmove(command_clean, command_clean + 2, strlen(command_clean) - 1);
+    }
+    if (command_clean[strlen(command_clean) - 1] == '?') {
+        command_clean[strlen(command_clean) - 1] = '\0';
+    }
+
+    // Crear comando formateado correctamente
+    char formatted_command[32];
+    snprintf(formatted_command, sizeof(formatted_command), "%s: ", command_clean);
+    free(command_clean);
+
+    // 4. Buscar y eliminar palabra limpia
+    char *result = strstr(text_copy, formatted_command);
+    if (result != NULL) {
+        result += strlen(formatted_command);
+        char *final_result = strdup(result);
+        free(text_copy);
+        return final_result;  // Devuelve nueva copia para usar en otras funciones
+    }
+
+    free(text_copy);
+    return NULL;
+}*/

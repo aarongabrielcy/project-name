@@ -13,6 +13,5 @@ void app_main(void) {
     uartManager_start();
     network_init();
     serialConsole_init();
-    //sim7600_init("AT");
     io_manager_init();
 }

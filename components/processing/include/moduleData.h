@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#define ANGLE_THRESHOLD 5.0  // Umbral de cambio de ángulo
+#define ANGLE_THRESHOLD 15.0  // Umbral de cambio de ángulo
 //extern bool reportFastMode;
 //extern int timeReport = 30;
 

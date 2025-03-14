@@ -19,9 +19,9 @@ typedef struct {
     float course;        // 0.00
     int gps_svs;         // 0
     int fix;             // 0
-    int in1_state;    // "00000100"
+    /*int in1_state;    // "00000100"
     int in_ig_st;
-    int out1_state;   // "00001000"
+    int out1_state;   // "00001000" */
     int mode;            // 0
     int stt_rpt_type;    // 0
     int msg_num;         // 0

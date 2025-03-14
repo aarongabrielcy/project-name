@@ -10,18 +10,16 @@
 #include <string.h>
 #include <math.h>
 
-static const char *TAG = "GNSS";
+static const char *TAG = "PROCESS";
 bool reportFastMode;
-
+float prevCourse = -1.0;
 void parseGPS(char *response) {
     char *cleanResponse = cleanData(response, "CGNSSINFO");
-
     if (cleanResponse == NULL) {
         printf("Error: No se pudo limpiar la respuesta GNSS.\n");
         return;
     }
     ESP_LOGI(TAG, "Clean CGNSSINFO => %s\n", cleanResponse);
-
     if (strstr(cleanResponse, ",,,,,,,,,,,,,,,") != NULL) {
         printf("No hay fix GNSS. Asignando valores por defecto.\n");
         //aqui estoy asignando por defecto.
@@ -29,7 +27,6 @@ void parseGPS(char *response) {
         add = (additionalData_t){};
         return;
     }
-
     // Parsear los datos si la respuesta no es vacía
     char *tokens[16] = {NULL};
     int index = 0;
@@ -45,7 +42,6 @@ void parseGPS(char *response) {
         return;
     }
 
-    double prevCourse = tkr.course;
     static bool noChangeReported = true;
 
     tkr.mode = atoi(tokens[0]);
@@ -60,7 +56,6 @@ void parseGPS(char *response) {
     strncpy(tkr.utctime, tokens[9], sizeof(tkr.utctime) - 1);
     add.alt = atof(tokens[10]);
     tkr.speed = atof(tokens[11]) * 1.85;
-
     // Manejo de course vacío
     if (index == 15) {  // No hay curso, ajustar los índices
         tkr.course = 0.0;
@@ -73,19 +68,22 @@ void parseGPS(char *response) {
         add.hdop = atof(tokens[14]);
         add.vdop = atof(tokens[15]);
     }
-
     tkr.fix = 1;
-
-    if (fabs(tkr.course - prevCourse) >= ANGLE_THRESHOLD) {
-        printf("Cambio de rumbo detectado (%.2f°), activando reporte rápido.\n", fabs(tkr.course - prevCourse));
-        noChangeReported = false; 
-        sim7600_sendATCommand("AT+CGNSSINFO=2");
+    float difference = fabs(tkr.course - prevCourse);
+    if (difference >= ANGLE_THRESHOLD) {
+        printf("Cambio de rumbo detectado (%.2f°), activando reporte rápido.\n", difference);
+        noChangeReported = false;
+        prevCourse = tkr.course; 
+        if(sim7600_sendReadCommand("AT+CGNSSINFO=3")){
+            printf("tiempo de reporte A 3 segundoS!");
+        }
     } else if (!noChangeReported) {  
         printf("No hay cambio de curso.\n");
         noChangeReported = true;
-        sim7600_sendATCommand("AT+CGNSSINFO=30");  
+        if(sim7600_sendReadCommand("AT+CGNSSINFO=20")){
+            printf("tiempo de reporte 20 segundo!");
+        }
     }
-
     printf("\n--- Datos GNSS Parseados ---\n");
     printf("Mode: %d\n", tkr.mode);
     printf("GPS SVs: %d\n", tkr.gps_svs);
@@ -121,7 +119,10 @@ bool parsePSI(char *response) {
         parseCDMA(cleanResponse);
     } else if (strncmp(cleanResponse, "EVDO", 4) == 0) {
         parseEVDO(cleanResponse);
-    } else {
+    }else if (strncmp(cleanResponse, "NO SERVICE", 10) == 0) {
+        ESP_LOGW(TAG, "Red celular: %s", cleanResponse);
+        return false;
+    }else {
         ESP_LOGW(TAG, "Formato de CPSI inválido: %s", cleanResponse);
         return false;
     }
