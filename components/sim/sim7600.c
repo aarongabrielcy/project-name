@@ -4,7 +4,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "string.h"
-
+#include "pwManager.h"
 #define TAG "SIM7600"
 #define MAX_RETRIES 10
 
@@ -28,15 +28,31 @@ void sim7600_init(const char *command) {
 }
 
 void sim7600_basic_config() {
+    bool ign = !power_get_ignition_state();
     sim7600_init("AT+SIMEI?");
     sim7600_init("AT+CGPS=1");
     sim7600_init("AT+CPSI=28");
-    sim7600_init("AT+CGNSSINFO=255");
+    /*El valor del comando debe cambiar sengun el estado de la ignición*/
+    if(ign) {
+        ESP_LOGI(TAG, "Ignition State: %d", ign);
+    }else {
+        sim7600_init("AT+CGNSSINFO=255");
+    }
     sim7600_init("AT+NETOPEN");
     sim7600_init("AT+CIPOPEN=0,\"TCP\",\"34.196.135.179\",5200");
     //sim7600_init("ATE0"); //NO REPLICA LOS COMANDOS ENVIADOS EN LAS RESPUESTAS "0"
 }
-
+void sim7600_reconnect_tcp_server() {
+    /*vuelve boolana la funcion o valida los comandos que se ejecuten validando la respuesta
+    de cada comando o consultalos después de ejecutarlos*/
+    sim7600_sendATCommand("AT+CIPOPEN=0,\"TCP\",\"34.196.135.179\",5200");   
+}
+void sim7600_reconnect_tcp_service() {
+    /*vuelve boolana la funcion o valida los comandos que se ejecuten validando la respuesta
+    de cada comando o consultalos después de ejecutarlos*/
+    sim7600_sendATCommand("AT+NETOPEN");
+    sim7600_sendATCommand("AT+CIPOPEN=0,\"TCP\",\"34.196.135.179\",5200");   
+}
 void sim7600_sendATCommand(const char *command) {
     ESP_LOGI(TAG, "Enviando comando: %s", command);
     uartManager_sendCommand(command);
@@ -49,4 +65,14 @@ int sim7600_readResponse(char *buffer, int max_length) {
         ESP_LOGI(TAG, "Respuesta recibida: %s", buffer);
     }
     return len;
+}
+
+bool sim7600_sendReadCommand(const char *command) {
+    if (uartManager_sendReadUart(command)) {
+        ESP_LOGI(TAG, "SIM7600 successfully initialized ~~~~");
+        return true;  // Exit function if communication is successful
+    } else {
+        ESP_LOGI(TAG, "command failed %s", command);
+        return false;
+    }   
 }

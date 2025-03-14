@@ -33,6 +33,8 @@ static void serialConsole_task(void *arg) {
             } else if (strncmp((char*)data, "RESTART", 7) == 0) {
                 // Reiniciar ESP32
                 //power_restart();
+            } else if (strncmp((char*)data, "CLNBFR", 7) == 0) {
+                ESP_LOGW(TAG, "Borrando buffer con el comando: %s", (char*)data);
             } else {
                 ESP_LOGW(TAG, "Comando no reconocido: %s", (char*)data);
             }

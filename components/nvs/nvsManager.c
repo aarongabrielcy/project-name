@@ -1,6 +1,4 @@
 #include "nvsManager.h"
-#include "nvs_flash.h"
-#include "nvs.h"
 #include "esp_log.h"
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +15,6 @@ esp_err_t nvs_init() {
     }
     return err;
 }
-
 // Guardar un string con una clave específica
 esp_err_t nvs_save_str(const char* key, const char* value) {
     nvs_handle_t handle;
@@ -36,7 +33,7 @@ esp_err_t nvs_save_str(const char* key, const char* value) {
 
 // Leer un string con una clave específica
 char* nvs_read_str(const char* key) {
-    static char buffer[64];  // 🔵 ESPACIO RESERVADO FIJO EN MEMORIA
+    static char buffer[64];  //ESPACIO RESERVADO FIJO EN MEMORIA
     size_t required_size;
     nvs_handle_t handle;
 
@@ -85,3 +82,6 @@ int nvs_read_int(const char* key) {
     nvs_close(handle);
     return value;
 }
+
+
+
