@@ -8,6 +8,7 @@
 #include "esp_log.h"
 #include "driver/uart.h"
 #include <string.h>
+#include "nvsManager.h"
 
 #define TAG "SERIAL_CONSOLE"
 #define UART_NUM UART_NUM_0
@@ -35,6 +36,7 @@ static void serialConsole_task(void *arg) {
                 //power_restart();
             } else if (strncmp((char*)data, "CLNBFR", 7) == 0) {
                 ESP_LOGW(TAG, "Borrando buffer con el comando: %s", (char*)data);
+                nvs_flash_erase();
             } else {
                 ESP_LOGW(TAG, "Comando no reconocido: %s", (char*)data);
             }

@@ -65,6 +65,7 @@ static void uart_task(void *arg) {
                 snprintf(message, sizeof(message), "STT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;0000000%d;00000000;1;1;0929;4.1;14.19",
                 formatDevID(dev_id), date_time,serInf.cell_id, serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.rxlvl_rsrp, latitud, longitud,tkr.speed, tkr.course,
                 tkr.gps_svs, tkr.fix, ignition);
+                /**  Crea la funcion sendToServer() y la llamas aquí y dentro de esa funcion guardas las candeas en buffer antes de enviar **/
                 /* ******* guarda aquí la cadena en buffer ******** */
                 if(redService){
                     char sendCommand[50];
@@ -76,13 +77,14 @@ static void uart_task(void *arg) {
                         //sim7600_sendATCommand(message);
                     }
                 }else{ESP_LOGI(TAG, "nueva cadena en buffer:%s", message);}
-            }else if (strstr(response, "+NETOPEN: 0") != NULL) {
+                
+            } else if (strstr(response, "+NETOPEN: 0") != NULL) {
                 char *net = cleanData(response, "NETOPEN");
                 if(strstr(net, "0") != NULL) {
                     netOpen = true;
                     ESP_LOGI(TAG, "servicio tcp activo");    
                 }
-            }else if (strstr(response, "+CIPOPEN:") != NULL) {
+            } else if (strstr(response, "+CIPOPEN:") != NULL) {
                 char *cip = cleanData(response, "CIPOPEN");
                 if(strstr(cip, "0,0") != NULL) {
                     cipOpen = true;
@@ -165,7 +167,11 @@ bool uartManager_sendReadUart(const char *command) {
     if (len > 0) {
         response[len] = '\0';
          // Limpiar la respuesta
-         char *cleanedResponse = cleanResponse(response);        
+         char *cleanedResponse = cleanResponse(response);
+         if (cleanedResponse == NULL) {
+            ESP_LOGE(TAG, "cleanResponse retornó NULL");
+            return false;
+        }    
         ESP_LOGI(TAG, "Respuesta:%s", cleanedResponse );
         // Check if response contains '>'
         if (strchr(cleanedResponse, '>') != NULL) {
@@ -181,23 +187,35 @@ bool uartManager_sendReadUart(const char *command) {
         if(strstr(cleanedResponse, "SIMEI") != NULL) {
             dev_id = nvs_read_str("dev_id");
             if (dev_id != NULL) {
-                printf("Dev ID: %s\n", dev_id);
-                //free(dev_id);
+                ESP_LOGI(TAG, "Longitud real: %d", (int)strlen(dev_id));
+                printf("Dev ID:%s\n", dev_id);
+                if (strlen(dev_id) != 15) {
+                    printf("imei Incorrecto: %s\n", dev_id);
+                    nvs_delete_key(dev_id); 
+                }else { 
+                    ESP_LOGI(TAG, "IMEI correcto: %s", dev_id);
+                }    
             }else {
                 char* dev_id = cleanATResponse(cleanedResponse);
-                ESP_LOGI(TAG, "DEV_ID=>%s", dev_id);
-                nvs_save_str("dev_id", dev_id);
+                ESP_LOGI(TAG, "IMEI parseado: %s", dev_id);
+                ESP_LOGI(TAG, "Longitud: %d", (int)strlen(dev_id));
+                if (strlen(dev_id) == 15) {
+                    ESP_LOGI(TAG, "DEV_ID=>%s", dev_id);
+                    nvs_save_str("dev_id", dev_id);
+                }
             }
             return true;  
         }else if(strstr(cleanedResponse, "CCLK") != NULL) {
-            char * cleaned_response = cleanATResponse(cleanedResponse);
-            //ESP_LOGI(TAG, "Formateando UTC... %s", cleaned_response); 
-            char* result = getFormatUTC(cleaned_response);
-            // Copiar el resultado en date_time sin desbordar
-            strncpy(date_time, result, sizeof(date_time) - 1);
-            // Asegurar terminación nula
-            //ESP_LOGI(TAG, "dateTime UTC... %s", result); 
-            date_time[sizeof(date_time) - 1] = '\0';
+            char *cleaned_response = cleanATResponse(cleanedResponse);
+        if (cleaned_response != NULL) {
+            char *result = getFormatUTC(cleaned_response);
+            if (result != NULL) {
+                strncpy(date_time, result, sizeof(date_time) - 1);
+                date_time[sizeof(date_time) - 1] = '\0';
+            } else {
+                ESP_LOGE(TAG, "getFormatUTC retornó NULL");
+            }
+        }
         }else if(strstr(cleanedResponse, "+CIPERROR:") != NULL) {
             sendData = false;
             char *err = cleanData(response, "AT+CIPSEND=0,");

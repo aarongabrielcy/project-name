@@ -82,6 +82,18 @@ int nvs_read_int(const char* key) {
     nvs_close(handle);
     return value;
 }
+// Borrar un valor (string o entero) con una clave específica
+esp_err_t nvs_delete_key(const char* key) {
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &handle);
+    if (err != ESP_OK) return err;
 
+    err = nvs_erase_key(handle, key);
+    if (err == ESP_OK) {
+        nvs_commit(handle);
+        ESP_LOGI(TAG, "%s eliminado", key);
+    }
 
-
+    nvs_close(handle);
+    return err;
+}
