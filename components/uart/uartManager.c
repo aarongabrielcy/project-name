@@ -12,6 +12,7 @@
 #include "network.h"
 #include "utilities.h"
 #include "nvsManager.h"
+#include "eventHandler.h"
 
 static const char *TAG = "UART_MANAGER";
 
@@ -25,6 +26,9 @@ bool sendData = true;
 bool netOpen = false;
 bool cipOpen = false;
 bool configState = false;
+int event = 0;
+static int keep_alive_interval = 600000; // Valor en milisegundos (10 minutos)
+
 void uart_init() {
     uart_config_t uart_config = {
         .baud_rate = 115200,
@@ -44,10 +48,11 @@ static void uart_task(void *arg) {
         int len = uartManager_readEvent(response, sizeof(response));
         if (len > 0) {
             ESP_LOGI(TAG, "Evento UART: %s", response);
+            /**crea mañana con el metodo "queue" para que propague o escuches los eventos en cualquier componente que necesties */
             if(configState) {
                 ignition = !power_get_ignition_state();
             }
-            if (strstr(response, "+CGNSSINFO:") != NULL) {
+            if (strstr(response, "+CGNSSINFO:") != NULL ) {
                 ESP_LOGI(TAG, "Evento GNSS detectado.");
                 parseGPS(response);
                 strcpy(latitud, formatCoordinates(tkr.lat, tkr.ns));
@@ -60,23 +65,28 @@ static void uart_task(void *arg) {
                     if(uartManager_sendReadUart("AT+CCLK?") ){
                     }
                 }
+                switch (event) {
+                case STT:
+                    /* code */
+                    break;
+                case ALV:
+                    /* code */
+                    break;
+                case KEEP:
+                    /* code */
+                    break;    
+                default:
+                    break;
+                }
                 /*ESP_LOGI(TAG, "Enviando datos GNSS ->date time: %s Lat: %s, Lon: %s, Velocidad: %.2f, Fix: %d, ign: %d, id: %s", 
                 date_time, latitud, longitud, tkr.speed, tkr.fix, ignition, dev_id);*/                
                 snprintf(message, sizeof(message), "STT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;0000000%d;00000000;1;1;0929;4.1;14.19",
                 formatDevID(dev_id), date_time,serInf.cell_id, serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.rxlvl_rsrp, latitud, longitud,tkr.speed, tkr.course,
                 tkr.gps_svs, tkr.fix, ignition);
-                /**  Crea la funcion sendToServer() y la llamas aquí y dentro de esa funcion guardas las candeas en buffer antes de enviar **/
-                /* ******* guarda aquí la cadena en buffer ******** */
-                if(redService){
-                    char sendCommand[50];
-                snprintf(sendCommand, sizeof(sendCommand), "AT+CIPSEND=0,%d", (int)strlen(message)); //FORMA EL COMANDO "AT+CIPSEND=0,length"
-                    if(uartManager_sendReadUart(sendCommand) ){
-                        if(uartManager_sendReadUart(message) ){ 
-                            ESP_LOGI(TAG, "Envío exitoso!");
-                        }
-                        //sim7600_sendATCommand(message);
-                    }
-                }else{ESP_LOGI(TAG, "nueva cadena en buffer:%s", message);}
+                
+                if(!sendToServer(message) ) {
+                    ESP_LOGI(TAG, "envío de mensaje al servidor falló!");    
+                }
                 
             } else if (strstr(response, "+NETOPEN: 0") != NULL) {
                 char *net = cleanData(response, "NETOPEN");
@@ -120,6 +130,7 @@ static void uart_task(void *arg) {
                 char * cip_event = cleanData(response, "CIPEVENT");
                 ESP_LOGI(TAG, "CIP EVENT => %s", cip_event);
             }else if (strstr(response, "+CMTI:") != NULL) {  
+                /**Crea una funcion peridoca de cada 2 minutos que valide si tienes mensajes por si se pierde alguno **/
                 printf("SMS Detectado, enviando comando para leer...\n");
                 // Encontrar la posición de la coma ","
                 char *comma_pos = strchr(response, ',');
@@ -247,3 +258,34 @@ void uartManager_start() {
     xTaskCreate(uart_task, "uart_task", 4096, NULL, 5, NULL);
 }
 
+
+int sendToServer(char * message) {
+
+    if(redService) {
+        char sendCommand[50];
+    snprintf(sendCommand, sizeof(sendCommand), "AT+CIPSEND=0,%d", (int)strlen(message)); //FORMA EL COMANDO "AT+CIPSEND=0,length"
+        if(uartManager_sendReadUart(sendCommand) ){
+            if(uartManager_sendReadUart(message) ){ 
+                ESP_LOGI(TAG, "Envío exitoso!");
+                return 1;
+            }
+        }
+    }else{
+        ESP_LOGI(TAG, "nueva cadena en buffer:%s", message);
+        return 0;
+    }
+    return 0;
+}
+static void system_event_handler(void *handler_arg, esp_event_base_t base, int32_t event_id, void *event_data) {
+    switch (event_id) {
+        case IGNITION_ON:
+            ESP_LOGI(TAG, "Ignición ENCENDIDA");
+            break;
+        case IGNITION_OFF:
+            ESP_LOGI(TAG, "Ignición APAGADA");
+            break;
+        case KEEP_ALIVE:
+            ESP_LOGI(TAG, "Evento KEEP_ALIVE: han pasado %d minutos", keep_alive_interval / 60000);
+            break;
+    }
+}
