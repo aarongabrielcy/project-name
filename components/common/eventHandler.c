@@ -11,20 +11,32 @@ static esp_timer_handle_t keep_alive_timer = NULL;
 static uint32_t keep_alive_interval = 600000; // 10 minutos por defecto
 
 static void keep_alive_callback(void *arg) {
-    esp_event_post_to(get_event_loop(), SYSTEM_EVENTS, KEEP_ALIVE, NULL, 0, portMAX_DELAY);
+    uint32_t keep_alive_data = keep_alive_interval;
+    esp_event_post_to(get_event_loop(), SYSTEM_EVENTS, KEEP_ALIVE, &keep_alive_data, sizeof(uint32_t), portMAX_DELAY);
 }
 
 esp_event_loop_handle_t get_event_loop(void) {
+    static bool initialized = false;
+
     if (!event_loop_handle) {
+        ESP_LOGW("EVENT_HANDLER", "Event loop no inicializado. Creando...");
+        
         esp_event_loop_args_t loop_args = {
             .queue_size = 10,
             .task_name = "event_task",
             .task_priority = 5,
-            .task_stack_size = 2048,
+            .task_stack_size = 4096,  // Incrementado el stack por seguridad
             .task_core_id = 0
         };
-        esp_event_loop_create(&loop_args, &event_loop_handle);
-    }
+
+        esp_err_t err = esp_event_loop_create(&loop_args, &event_loop_handle);
+        if (err != ESP_OK) {
+            ESP_LOGE("EVENT_HANDLER", "Error creando event loop: %s", esp_err_to_name(err));
+            return NULL;
+        }
+        
+        initialized = true;
+    }   
     return event_loop_handle;
 }
 

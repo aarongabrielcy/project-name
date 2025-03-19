@@ -18,7 +18,7 @@ static const char *TAG = "UART_MANAGER";
 
 char latitud[20];
 char longitud[20];
-bool ignition;
+bool ignition = false;
 char date_time[34];
 char* dev_id;
 bool redService = false;
@@ -44,14 +44,15 @@ void uart_init() {
 static void uart_task(void *arg) {
     char response[256];
     char message[256];
+
     while (1) {
         int len = uartManager_readEvent(response, sizeof(response));
         if (len > 0) {
             ESP_LOGI(TAG, "Evento UART: %s", response);
             /**crea mañana con el metodo "queue" para que propague o escuches los eventos en cualquier componente que necesties */
-            if(configState) {
+            /*if(configState) {
                 ignition = !power_get_ignition_state();
-            }
+            }*/            
             if (strstr(response, "+CGNSSINFO:") != NULL ) {
                 ESP_LOGI(TAG, "Evento GNSS detectado.");
                 parseGPS(response);
@@ -65,29 +66,53 @@ static void uart_task(void *arg) {
                     if(uartManager_sendReadUart("AT+CCLK?") ){
                     }
                 }
-                switch (event) {
-                case STT:
-                    /* code */
+                switch (event) {       
+                    case TRACKING_RPT:
+                        ESP_LOGI(TAG, "Evento TRAKING REPORT ~~~~~~~~~~~~~~~~~~~~~~~~");
+                        snprintf(message, sizeof(message), "STT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;0000000%d;00000000;1;1;0929;4.1;14.19",
+                        formatDevID(dev_id), date_time,serInf.cell_id, serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.rxlvl_rsrp, latitud, longitud,tkr.speed, tkr.course,
+                        tkr.gps_svs, tkr.fix, ignition);
+                        if(!sendToServer(message) ) {
+                            ESP_LOGI(TAG, "envío de mensaje al servidor falló!");    
+                        }
                     break;
-                case ALV:
-                    /* code */
+                    case IGNITION_ON:
+                        ESP_LOGI(TAG, "Evento IGN ON ~~~~~~~~~~~~~~~~~~~~~~~~");  
+                        snprintf(message, sizeof(message), "ALT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;0000000%d;00000000;%d;;",
+                        formatDevID(dev_id), date_time,serInf.cell_id, serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.rxlvl_rsrp, latitud, longitud,tkr.speed, tkr.course,
+                        tkr.gps_svs, tkr.fix, ignition, 33);  
+                        if(!sendToServer(message) ) {
+                            ESP_LOGI(TAG, "envío de mensaje al servidor falló!");    
+                        }
+                        event = TRACKING_RPT;
                     break;
-                case KEEP:
-                    /* code */
+                    case IGNITION_OFF:
+                        ESP_LOGI(TAG, "Evento IGN OFF ~~~~~~~~~~~~~~~~~~~~~~~~");
+                        snprintf(message, sizeof(message), "ALT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;0000000%d;00000000;%d;;",
+                        formatDevID(dev_id), date_time,serInf.cell_id, serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.rxlvl_rsrp, latitud, longitud,tkr.speed, tkr.course,
+                        tkr.gps_svs, tkr.fix, ignition, 34);
+                        if(!sendToServer(message) ) {
+                            ESP_LOGI(TAG, "envío de mensaje al servidor falló!");    
+                        }
+                        event = DEFAULT;
+                        sim7600_init("AT+CGNSSINFO=0");    
+                    break;
+                    case KEEP_ALIVE:
+                    /* valia que el keep a live se mande solo después de la ignición*/
+                        ESP_LOGI(TAG, "Evento KEEP A LIVE ~~~~~~~~~~~~~~~~~~~~~~~~");
+                        snprintf(message, sizeof(message), "ALV;%s",
+                        formatDevID(dev_id));    
+                        if(!sendToServer(message) ) {
+                            ESP_LOGI(TAG, "envío de mensaje al servidor falló!");    
+                        }
+                        event = DEFAULT;
                     break;    
-                default:
+                    default:
+                        ESP_LOGI(TAG, "SIN EVENTO ~~~~~~~~~~~~~~~~~~~~~~~~");
+                        ESP_LOGI(TAG, "Enviando datos GNSS ->date time: %s Lat: %s, Lon: %s, Velocidad: %.2f, Fix: %d, ign: %d, id: %s", 
+                        date_time, latitud, longitud, tkr.speed, tkr.fix, ignition, dev_id); 
                     break;
-                }
-                /*ESP_LOGI(TAG, "Enviando datos GNSS ->date time: %s Lat: %s, Lon: %s, Velocidad: %.2f, Fix: %d, ign: %d, id: %s", 
-                date_time, latitud, longitud, tkr.speed, tkr.fix, ignition, dev_id);*/                
-                snprintf(message, sizeof(message), "STT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;0000000%d;00000000;1;1;0929;4.1;14.19",
-                formatDevID(dev_id), date_time,serInf.cell_id, serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.rxlvl_rsrp, latitud, longitud,tkr.speed, tkr.course,
-                tkr.gps_svs, tkr.fix, ignition);
-                
-                if(!sendToServer(message) ) {
-                    ESP_LOGI(TAG, "envío de mensaje al servidor falló!");    
-                }
-                
+                }  
             } else if (strstr(response, "+NETOPEN: 0") != NULL) {
                 char *net = cleanData(response, "NETOPEN");
                 if(strstr(net, "0") != NULL) {
@@ -247,7 +272,6 @@ bool uartManager_sendReadUart(const char *command) {
             //sim7600_sendATCommand("AT+CPIN?");
             return true;
         }
-        
     } else {
         ESP_LOGW(TAG, "No hubo respuesta del módulo.");
         return false;
@@ -257,8 +281,6 @@ bool uartManager_sendReadUart(const char *command) {
 void uartManager_start() {
     xTaskCreate(uart_task, "uart_task", 4096, NULL, 5, NULL);
 }
-
-
 int sendToServer(char * message) {
 
     if(redService) {
@@ -279,13 +301,25 @@ int sendToServer(char * message) {
 static void system_event_handler(void *handler_arg, esp_event_base_t base, int32_t event_id, void *event_data) {
     switch (event_id) {
         case IGNITION_ON:
-            ESP_LOGI(TAG, "Ignición ENCENDIDA");
+            ignition = true;
+            event = IGNITION_ON;
+            /*si llegara a ver un falso de ignición hay que validar que el envó repetitivo de comandos no afecte, ponle una validación que solo se ejecute una vez hasta que haya ignicion  OFF y viseversa*/
+            sim7600_init("AT+CGNSSINFO=30");
+            ESP_LOGI(TAG, "Ignition=> ENCENDIDA"); 
             break;
         case IGNITION_OFF:
-            ESP_LOGI(TAG, "Ignición APAGADA");
+            ignition = false;
+            event = IGNITION_OFF;
+            ESP_LOGI(TAG, "Ignition=> APAGADA");
             break;
         case KEEP_ALIVE:
+            event = KEEP_ALIVE;
+            sim7600_init("AT+CGNSSINFO");
             ESP_LOGI(TAG, "Evento KEEP_ALIVE: han pasado %d minutos", keep_alive_interval / 60000);
             break;
     }
+}
+void start_uart_task(void) {
+    esp_event_loop_handle_t loop = get_event_loop();
+    esp_event_handler_register_with(loop, SYSTEM_EVENTS, ESP_EVENT_ANY_ID, system_event_handler, NULL);
 }

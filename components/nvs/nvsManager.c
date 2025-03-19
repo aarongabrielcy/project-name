@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define STORAGE_NAMESPACE "storage"
+//#define STORAGE_NAMESPACE "storage"
 static const char *TAG = "NVS_MANAGER";
 
 // Inicializa NVS (Solo llamar una vez en `app_main()`)
