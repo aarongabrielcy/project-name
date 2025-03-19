@@ -12,12 +12,13 @@
 #include "network.h"
 #include "utilities.h"
 #include "nvsManager.h"
+#include "eventHandler.h"
 
 static const char *TAG = "UART_MANAGER";
 
 char latitud[20];
 char longitud[20];
-bool ignition;
+bool ignition = false;
 char date_time[34];
 char* dev_id;
 bool redService = false;
@@ -25,6 +26,9 @@ bool sendData = true;
 bool netOpen = false;
 bool cipOpen = false;
 bool configState = false;
+int event = 0;
+static int keep_alive_interval = 600000; // Valor en milisegundos (10 minutos)
+
 void uart_init() {
     uart_config_t uart_config = {
         .baud_rate = 115200,
@@ -40,14 +44,16 @@ void uart_init() {
 static void uart_task(void *arg) {
     char response[256];
     char message[256];
+
     while (1) {
         int len = uartManager_readEvent(response, sizeof(response));
         if (len > 0) {
             ESP_LOGI(TAG, "Evento UART: %s", response);
-            if(configState) {
+            /**crea mañana con el metodo "queue" para que propague o escuches los eventos en cualquier componente que necesties */
+            /*if(configState) {
                 ignition = !power_get_ignition_state();
-            }
-            if (strstr(response, "+CGNSSINFO:") != NULL) {
+            }*/            
+            if (strstr(response, "+CGNSSINFO:") != NULL ) {
                 ESP_LOGI(TAG, "Evento GNSS detectado.");
                 parseGPS(response);
                 strcpy(latitud, formatCoordinates(tkr.lat, tkr.ns));
@@ -60,29 +66,60 @@ static void uart_task(void *arg) {
                     if(uartManager_sendReadUart("AT+CCLK?") ){
                     }
                 }
-                /*ESP_LOGI(TAG, "Enviando datos GNSS ->date time: %s Lat: %s, Lon: %s, Velocidad: %.2f, Fix: %d, ign: %d, id: %s", 
-                date_time, latitud, longitud, tkr.speed, tkr.fix, ignition, dev_id);*/                
-                snprintf(message, sizeof(message), "STT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;0000000%d;00000000;1;1;0929;4.1;14.19",
-                formatDevID(dev_id), date_time,serInf.cell_id, serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.rxlvl_rsrp, latitud, longitud,tkr.speed, tkr.course,
-                tkr.gps_svs, tkr.fix, ignition);
-                /* ******* guarda aquí la cadena en buffer ******** */
-                if(redService){
-                    char sendCommand[50];
-                snprintf(sendCommand, sizeof(sendCommand), "AT+CIPSEND=0,%d", (int)strlen(message)); //FORMA EL COMANDO "AT+CIPSEND=0,length"
-                    if(uartManager_sendReadUart(sendCommand) ){
-                        if(uartManager_sendReadUart(message) ){ 
-                            ESP_LOGI(TAG, "Envío exitoso!");
+                switch (event) {       
+                    case TRACKING_RPT:
+                        ESP_LOGI(TAG, "Evento TRAKING REPORT ~~~~~~~~~~~~~~~~~~~~~~~~");
+                        snprintf(message, sizeof(message), "STT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;0000000%d;00000000;1;1;0929;4.1;14.19",
+                        formatDevID(dev_id), date_time,serInf.cell_id, serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.rxlvl_rsrp, latitud, longitud,tkr.speed, tkr.course,
+                        tkr.gps_svs, tkr.fix, ignition);
+                        if(!sendToServer(message) ) {
+                            ESP_LOGI(TAG, "envío de mensaje al servidor falló!");    
                         }
-                        //sim7600_sendATCommand(message);
-                    }
-                }else{ESP_LOGI(TAG, "nueva cadena en buffer:%s", message);}
-            }else if (strstr(response, "+NETOPEN: 0") != NULL) {
+                    break;
+                    case IGNITION_ON:
+                        ESP_LOGI(TAG, "Evento IGN ON ~~~~~~~~~~~~~~~~~~~~~~~~");  
+                        snprintf(message, sizeof(message), "ALT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;0000000%d;00000000;%d;;",
+                        formatDevID(dev_id), date_time,serInf.cell_id, serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.rxlvl_rsrp, latitud, longitud,tkr.speed, tkr.course,
+                        tkr.gps_svs, tkr.fix, ignition, 33);  
+                        if(!sendToServer(message) ) {
+                            ESP_LOGI(TAG, "envío de mensaje al servidor falló!");    
+                        }
+                        event = TRACKING_RPT;
+                    break;
+                    case IGNITION_OFF:
+                        ESP_LOGI(TAG, "Evento IGN OFF ~~~~~~~~~~~~~~~~~~~~~~~~");
+                        snprintf(message, sizeof(message), "ALT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;0000000%d;00000000;%d;;",
+                        formatDevID(dev_id), date_time,serInf.cell_id, serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.rxlvl_rsrp, latitud, longitud,tkr.speed, tkr.course,
+                        tkr.gps_svs, tkr.fix, ignition, 34);
+                        if(!sendToServer(message) ) {
+                            ESP_LOGI(TAG, "envío de mensaje al servidor falló!");    
+                        }
+                        event = DEFAULT;
+                        sim7600_init("AT+CGNSSINFO=0");    
+                    break;
+                    case KEEP_ALIVE:
+                    /* valia que el keep a live se mande solo después de la ignición*/
+                        ESP_LOGI(TAG, "Evento KEEP A LIVE ~~~~~~~~~~~~~~~~~~~~~~~~");
+                        snprintf(message, sizeof(message), "ALV;%s",
+                        formatDevID(dev_id));    
+                        if(!sendToServer(message) ) {
+                            ESP_LOGI(TAG, "envío de mensaje al servidor falló!");    
+                        }
+                        event = DEFAULT;
+                    break;    
+                    default:
+                        ESP_LOGI(TAG, "SIN EVENTO ~~~~~~~~~~~~~~~~~~~~~~~~");
+                        ESP_LOGI(TAG, "Enviando datos GNSS ->date time: %s Lat: %s, Lon: %s, Velocidad: %.2f, Fix: %d, ign: %d, id: %s", 
+                        date_time, latitud, longitud, tkr.speed, tkr.fix, ignition, dev_id); 
+                    break;
+                }  
+            } else if (strstr(response, "+NETOPEN: 0") != NULL) {
                 char *net = cleanData(response, "NETOPEN");
                 if(strstr(net, "0") != NULL) {
                     netOpen = true;
                     ESP_LOGI(TAG, "servicio tcp activo");    
                 }
-            }else if (strstr(response, "+CIPOPEN:") != NULL) {
+            } else if (strstr(response, "+CIPOPEN:") != NULL) {
                 char *cip = cleanData(response, "CIPOPEN");
                 if(strstr(cip, "0,0") != NULL) {
                     cipOpen = true;
@@ -118,6 +155,7 @@ static void uart_task(void *arg) {
                 char * cip_event = cleanData(response, "CIPEVENT");
                 ESP_LOGI(TAG, "CIP EVENT => %s", cip_event);
             }else if (strstr(response, "+CMTI:") != NULL) {  
+                /**Crea una funcion peridoca de cada 2 minutos que valide si tienes mensajes por si se pierde alguno **/
                 printf("SMS Detectado, enviando comando para leer...\n");
                 // Encontrar la posición de la coma ","
                 char *comma_pos = strchr(response, ',');
@@ -165,7 +203,11 @@ bool uartManager_sendReadUart(const char *command) {
     if (len > 0) {
         response[len] = '\0';
          // Limpiar la respuesta
-         char *cleanedResponse = cleanResponse(response);        
+         char *cleanedResponse = cleanResponse(response);
+         if (cleanedResponse == NULL) {
+            ESP_LOGE(TAG, "cleanResponse retornó NULL");
+            return false;
+        }    
         ESP_LOGI(TAG, "Respuesta:%s", cleanedResponse );
         // Check if response contains '>'
         if (strchr(cleanedResponse, '>') != NULL) {
@@ -181,23 +223,35 @@ bool uartManager_sendReadUart(const char *command) {
         if(strstr(cleanedResponse, "SIMEI") != NULL) {
             dev_id = nvs_read_str("dev_id");
             if (dev_id != NULL) {
-                printf("Dev ID: %s\n", dev_id);
-                //free(dev_id);
+                ESP_LOGI(TAG, "Longitud real: %d", (int)strlen(dev_id));
+                printf("Dev ID:%s\n", dev_id);
+                if (strlen(dev_id) != 15) {
+                    printf("imei Incorrecto: %s\n", dev_id);
+                    nvs_delete_key(dev_id); 
+                }else { 
+                    ESP_LOGI(TAG, "IMEI correcto: %s", dev_id);
+                }    
             }else {
                 char* dev_id = cleanATResponse(cleanedResponse);
-                ESP_LOGI(TAG, "DEV_ID=>%s", dev_id);
-                nvs_save_str("dev_id", dev_id);
+                ESP_LOGI(TAG, "IMEI parseado: %s", dev_id);
+                ESP_LOGI(TAG, "Longitud: %d", (int)strlen(dev_id));
+                if (strlen(dev_id) == 15) {
+                    ESP_LOGI(TAG, "DEV_ID=>%s", dev_id);
+                    nvs_save_str("dev_id", dev_id);
+                }
             }
             return true;  
         }else if(strstr(cleanedResponse, "CCLK") != NULL) {
-            char * cleaned_response = cleanATResponse(cleanedResponse);
-            //ESP_LOGI(TAG, "Formateando UTC... %s", cleaned_response); 
-            char* result = getFormatUTC(cleaned_response);
-            // Copiar el resultado en date_time sin desbordar
-            strncpy(date_time, result, sizeof(date_time) - 1);
-            // Asegurar terminación nula
-            //ESP_LOGI(TAG, "dateTime UTC... %s", result); 
-            date_time[sizeof(date_time) - 1] = '\0';
+            char *cleaned_response = cleanATResponse(cleanedResponse);
+        if (cleaned_response != NULL) {
+            char *result = getFormatUTC(cleaned_response);
+            if (result != NULL) {
+                strncpy(date_time, result, sizeof(date_time) - 1);
+                date_time[sizeof(date_time) - 1] = '\0';
+            } else {
+                ESP_LOGE(TAG, "getFormatUTC retornó NULL");
+            }
+        }
         }else if(strstr(cleanedResponse, "+CIPERROR:") != NULL) {
             sendData = false;
             char *err = cleanData(response, "AT+CIPSEND=0,");
@@ -218,7 +272,6 @@ bool uartManager_sendReadUart(const char *command) {
             //sim7600_sendATCommand("AT+CPIN?");
             return true;
         }
-        
     } else {
         ESP_LOGW(TAG, "No hubo respuesta del módulo.");
         return false;
@@ -228,4 +281,45 @@ bool uartManager_sendReadUart(const char *command) {
 void uartManager_start() {
     xTaskCreate(uart_task, "uart_task", 4096, NULL, 5, NULL);
 }
+int sendToServer(char * message) {
 
+    if(redService) {
+        char sendCommand[50];
+    snprintf(sendCommand, sizeof(sendCommand), "AT+CIPSEND=0,%d", (int)strlen(message)); //FORMA EL COMANDO "AT+CIPSEND=0,length"
+        if(uartManager_sendReadUart(sendCommand) ){
+            if(uartManager_sendReadUart(message) ){ 
+                ESP_LOGI(TAG, "Envío exitoso!");
+                return 1;
+            }
+        }
+    }else{
+        ESP_LOGI(TAG, "nueva cadena en buffer:%s", message);
+        return 0;
+    }
+    return 0;
+}
+static void system_event_handler(void *handler_arg, esp_event_base_t base, int32_t event_id, void *event_data) {
+    switch (event_id) {
+        case IGNITION_ON:
+            ignition = true;
+            event = IGNITION_ON;
+            /*si llegara a ver un falso de ignición hay que validar que el envó repetitivo de comandos no afecte, ponle una validación que solo se ejecute una vez hasta que haya ignicion  OFF y viseversa*/
+            sim7600_init("AT+CGNSSINFO=30");
+            ESP_LOGI(TAG, "Ignition=> ENCENDIDA"); 
+            break;
+        case IGNITION_OFF:
+            ignition = false;
+            event = IGNITION_OFF;
+            ESP_LOGI(TAG, "Ignition=> APAGADA");
+            break;
+        case KEEP_ALIVE:
+            event = KEEP_ALIVE;
+            sim7600_init("AT+CGNSSINFO");
+            ESP_LOGI(TAG, "Evento KEEP_ALIVE: han pasado %d minutos", keep_alive_interval / 60000);
+            break;
+    }
+}
+void start_uart_task(void) {
+    esp_event_loop_handle_t loop = get_event_loop();
+    esp_event_handler_register_with(loop, SYSTEM_EVENTS, ESP_EVENT_ANY_ID, system_event_handler, NULL);
+}

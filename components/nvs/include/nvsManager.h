@@ -21,4 +21,9 @@ char* nvs_read_str(const char* key);
 esp_err_t nvs_save_int(const char* key, int value);
 int nvs_read_int(const char* key);
 
+esp_err_t nvs_delete_key(const char* key);
+
+/** BUFFER FIFO **/
+
+
 #endif
