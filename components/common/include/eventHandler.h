@@ -16,5 +16,5 @@ typedef enum {
 esp_event_loop_handle_t get_event_loop(void);
 void set_keep_alive_interval(uint32_t interval_ms);
 void start_keep_alive_timer(void);
-
+void stop_keep_alive_timer(void);
 #endif // EVENT_HANDLER_H

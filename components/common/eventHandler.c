@@ -16,7 +16,7 @@ static void keep_alive_callback(void *arg) {
 }
 
 esp_event_loop_handle_t get_event_loop(void) {
-    static bool initialized = false;
+    //static bool initialized = false;
 
     if (!event_loop_handle) {
         ESP_LOGW("EVENT_HANDLER", "Event loop no inicializado. Creando...");
@@ -35,7 +35,7 @@ esp_event_loop_handle_t get_event_loop(void) {
             return NULL;
         }
         
-        initialized = true;
+        //initialized = true;
     }   
     return event_loop_handle;
 }
@@ -49,12 +49,30 @@ void set_keep_alive_interval(uint32_t interval_ms) {
 }
 
 void start_keep_alive_timer(void) {
+    if (keep_alive_timer != NULL) {
+        ESP_LOGW("EVENT_HANDLER", "keep_alive_timer ya está en ejecución");
+        return;
+    }
+
     esp_timer_create_args_t timer_args = {
         .callback = &keep_alive_callback,
         .arg = NULL,
         .dispatch_method = ESP_TIMER_TASK,
         .name = "keep_alive_timer"
     };
-    esp_timer_create(&timer_args, &keep_alive_timer);
-    esp_timer_start_periodic(keep_alive_timer, keep_alive_interval * 1000);
+    if (esp_timer_create(&timer_args, &keep_alive_timer) == ESP_OK) {
+        esp_timer_start_periodic(keep_alive_timer, keep_alive_interval * 1000);
+        ESP_LOGI("EVENT_HANDLER", "keep_alive_timer iniciado");
+    } else {
+        ESP_LOGE("EVENT_HANDLER", "Error creando el keep_alive_timer");
+    }
+}
+
+void stop_keep_alive_timer(void) {
+    if (keep_alive_timer != NULL) {
+        esp_timer_stop(keep_alive_timer);
+        esp_timer_delete(keep_alive_timer);
+        keep_alive_timer = NULL;
+        ESP_LOGI("EVENT_HANDLER", "keep_alive_timer detenido y eliminado");
+    }
 }

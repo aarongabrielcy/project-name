@@ -28,18 +28,17 @@ void sim7600_init(const char *command) {
 }
 
 void sim7600_basic_config() {
-    bool ign = !power_get_ignition_state();
+    bool ign_st = !power_get_ignition_state();
     sim7600_init("AT+SIMEI?");
     sim7600_init("AT+CGPS=1");
-    sim7600_init("AT+CPSI=28");
-    /*El valor del comando debe cambiar sengun el estado de la ignición*/
-    if(ign) {
-        ESP_LOGI(TAG, "Ignition State: %d", ign);
-    }else {
-        sim7600_init("AT+CGNSSINFO=255");
-    }
+    sim7600_init("AT+CPSI=240");
     sim7600_init("AT+NETOPEN");
     sim7600_init("AT+CIPOPEN=0,\"TCP\",\"34.196.135.179\",5200");
+    if (ign_st) {
+        ESP_LOGI(TAG, "Ignition State: %d", ign_st);
+    } else {
+        sim7600_init("AT+CGNSSINFO=255");
+    }
     //sim7600_init("ATE0"); //NO REPLICA LOS COMANDOS ENVIADOS EN LAS RESPUESTAS "0"
 }
 void sim7600_reconnect_tcp_server() {
