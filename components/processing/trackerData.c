@@ -17,6 +17,7 @@ trackerData_t tkr = {
     .course = 0.00,
     .gps_svs = 0,
     .fix = 0,
+    .tkr_course = 0,
     /*.in_ig_st = 3,
     .in1_state = 0,
     .out1_state = 0,*/

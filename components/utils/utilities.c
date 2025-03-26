@@ -4,7 +4,7 @@
 #include <string.h>
 #include "esp_log.h"
 
-static const char *TAG = "UTILS";
+//static const char *TAG = "UTILS";
 
 char *cleanData(char *response, const char *command) {
     char *prefix = strstr(response, "+");
@@ -271,3 +271,5 @@ char* clean(const char* text, const char* word) {
     free(text_copy);
     return NULL;
 }*/
+
+

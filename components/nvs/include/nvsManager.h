@@ -10,6 +10,11 @@
 #define MAX_ENTRIES 1000      // Máximo de cadenas FIFO
 #define MAX_STRING_SIZE 140   // Tamaño máximo de cada cadena
 #define MAX_BUFFER_SIZE 10240 // Tamaño del buffer para concatenar cadenas
+
+#define KEY_PREFIX "entry_"  // Prefijo de las claves
+#define READ_INDEX_KEY "read_index"
+#define WRITE_INDEX_KEY "write_index"
+
 // Inicializa NVS (una sola vez)
 esp_err_t nvs_init(void);
 
@@ -24,6 +29,8 @@ int nvs_read_int(const char* key);
 esp_err_t nvs_delete_key(const char* key);
 
 /** BUFFER FIFO **/
-
+esp_err_t save_data_in_nvs(const char *data);
+char* read_first_list_storage();
+esp_err_t clean_data_in_nvs();
 
 #endif

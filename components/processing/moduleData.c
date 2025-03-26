@@ -75,12 +75,14 @@ void parseGPS(char *response) {
         noChangeReported = false;
         prevCourse = tkr.course; 
         if(sim7600_sendReadCommand("AT+CGNSSINFO=3")){
-            printf("tiempo de reporte A 3 segundoS!");
+            tkr.tkr_course = 1;
+            printf("tiempo de reporte A 2 segundoS!");
         }
     } else if (!noChangeReported) {  
         printf("No hay cambio de curso.\n");
         noChangeReported = true;
         if(sim7600_sendReadCommand("AT+CGNSSINFO=20")){
+            tkr.tkr_course = 0;
             printf("tiempo de reporte 20 segundo!");
         }
     }
@@ -150,8 +152,8 @@ void parseGSM(char *tokens) {
     strncpy(serInf.cell_id, values[4], sizeof(serInf.cell_id) - 1);
     serInf.rxlvl_rsrp = atoi(values[6]);
 
-    ESP_LOGI(TAG, "GSM Parseado: MCC:%d, MNC:%d, LAC:%s, CellID:%s, RXLVL:%d",
-             serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);
+    /*ESP_LOGI(TAG, "GSM Parseado: MCC:%d, MNC:%d, LAC:%s, CellID:%s, RXLVL:%d",
+             serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);*/
 }
 
 void parseLTE(char *tokens) {
@@ -175,8 +177,8 @@ void parseLTE(char *tokens) {
     strncpy(serInf.cell_id, values[4], sizeof(serInf.cell_id) - 1);
     serInf.rxlvl_rsrp = atoi(values[11]);
 
-    ESP_LOGI(TAG, "LTE Parseado: MCC:%d, MNC:%d, TAC:%s, CellID:%s, RSRP:%d",
-             serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);
+    /*ESP_LOGI(TAG, "LTE Parseado: MCC:%d, MNC:%d, TAC:%s, CellID:%s, RSRP:%d",
+             serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);*/
 }
 
 void parseWCDMA(char *tokens) {
@@ -200,8 +202,8 @@ void parseWCDMA(char *tokens) {
     strncpy(serInf.cell_id, values[4], sizeof(serInf.cell_id) - 1);
     serInf.rxlvl_rsrp = atoi(values[12]);
 
-    ESP_LOGI(TAG, "WCDMA Parseado: MCC:%d, MNC:%d, LAC:%s, CellID:%s, RXLVL:%d",
-             serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);
+    /*ESP_LOGI(TAG, "WCDMA Parseado: MCC:%d, MNC:%d, LAC:%s, CellID:%s, RXLVL:%d",
+             serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);*/
 }
 
 void parseCDMA(char *tokens) {
@@ -223,8 +225,8 @@ void parseCDMA(char *tokens) {
     serInf.mnc = atoi(values[2] + 4);
     serInf.rxlvl_rsrp = atoi(values[6]);
 
-    ESP_LOGI(TAG, "CDMA Parseado: MCC:%d, MNC:%d, RXLVL:%d",
-             serInf.mcc, serInf.mnc, serInf.rxlvl_rsrp);
+    /*ESP_LOGI(TAG, "CDMA Parseado: MCC:%d, MNC:%d, RXLVL:%d",
+             serInf.mcc, serInf.mnc, serInf.rxlvl_rsrp);*/
 }
 
 void parseEVDO(char *tokens) {
@@ -246,6 +248,6 @@ void parseEVDO(char *tokens) {
     serInf.mnc = atoi(values[2] + 4);
     serInf.rxlvl_rsrp = atoi(values[5]);
 
-    ESP_LOGI(TAG, "EVDO Parseado: MCC:%d, MNC:%d, RXLVL:%d",
-             serInf.mcc, serInf.mnc, serInf.rxlvl_rsrp);
+    /*ESP_LOGI(TAG, "EVDO Parseado: MCC:%d, MNC:%d, RXLVL:%d",
+             serInf.mcc, serInf.mnc, serInf.rxlvl_rsrp);*/
 }
