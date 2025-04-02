@@ -5,6 +5,9 @@ cmake_minimum_required(VERSION 3.16)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(project-name)
 
+# Definir la tabla de particiones personalizada
+idf_build_set_property(PARTITION_TABLE_CSV ${CMAKE_SOURCE_DIR}/partitions.csv)
+
 # Cargar la versión desde sdkconfig.h
 idf_build_get_property(sdkconfig_dir SDKCONFIG_DIR)
 set(PROJECT_VERSION_FILE "${sdkconfig_dir}/sdkconfig.h")
