@@ -14,6 +14,7 @@
 #include "nvsManager.h"
 #include "eventHandler.h"
 #include "storageManager.h"
+#include "cmdsManager.h"
 
 static const char *TAG = "UART_MANAGER";
 
@@ -70,7 +71,7 @@ static void uart_task(void *arg) {
                         tkr.gps_svs, tkr.fix, tkr.tkr_course, ignition);
                         if(!sendToServer(message) ) {
                             sim7600_sendATCommand("AT+CPSI?");
-                            ESP_LOGI(TAG, "error sending data to the server");/// para seguir usando los logs de ESP crea un enum de los TAGs para saber de que archivo viene
+                            ESP_LOGI(TAG, "error sending data,event:%d", TRACKING_RPT);/// para seguir usando los logs de ESP crea un enum de los TAGs para saber de que archivo viene
                         }
                     break;
                     case IGNITION_ON:
@@ -80,7 +81,7 @@ static void uart_task(void *arg) {
                         tkr.gps_svs, tkr.fix, ignition, 33);  
                         if(!sendToServer(message) ) {
                             sim7600_sendATCommand("AT+CPSI?");
-                            ESP_LOGI(TAG, "error sending data to the server");    
+                            ESP_LOGI(TAG, "error sending data, event:%d",IGNITION_ON);    
                         }
                         event = TRACKING_RPT;
                     break;
@@ -91,7 +92,7 @@ static void uart_task(void *arg) {
                         tkr.gps_svs, tkr.fix, ignition, 34);
                         if(!sendToServer(message) ) {
                             sim7600_sendATCommand("AT+CPSI?");
-                            ESP_LOGI(TAG, "error sending data to the server");    
+                            ESP_LOGI(TAG, "error sending data,event:%d",IGNITION_OFF);    
                         }
                         event = DEFAULT;
                         sim7600_sendATCommand("AT+CGNSSINFO=0");    
@@ -103,15 +104,15 @@ static void uart_task(void *arg) {
                         formatDevID(dev_id));    
                         if(!sendToServer(message) ) {
                             sim7600_sendATCommand("AT+CPSI?");    
-                            ESP_LOGI(TAG, "error sending data to the server");
+                            ESP_LOGI(TAG, "error sending data,event:%d",KEEP_ALIVE);
                         }
                         event = DEFAULT;
                     break;    
                     default:
                         //ESP_LOGI(TAG, "SIN EVENTO ~~~~~~~~~~~~~~~~~~~~~~~~");
                         /** cuando se reincia en esta linea es por que el id está vacio */
-                        ESP_LOGI(TAG, "Enviando datos GNSS ->date time: %s Lat: %s, Lon: %s, Velocidad: %.2f, Fix: %d, ign: %d, id: %s", 
-                        date_time, latitud, longitud, tkr.speed, tkr.fix, ignition, dev_id); 
+                        ESP_LOGI(TAG, "<head>\n<sys_mode>%s<oper>%s<cell_id>%s<mcc>%d<mnc>%d<lac>%s<rx_lvl>%d<date_time>%s,<lat>%s,<lon>%s,<speed>%.2f,<fix>%d,<ign>%d,<id>%s", 
+                           serInf.sys_mode, serInf.oper_mode, serInf.cell_id, serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.rxlvl_rsrp, date_time, latitud, longitud, tkr.speed, tkr.fix, ignition, dev_id); 
                     break;
                 }  
             } else if (strstr(response, "+NETOPEN: 0") != NULL) {
@@ -138,7 +139,7 @@ static void uart_task(void *arg) {
                 
             }else if(strstr(response, "+IPCLOSE:") != NULL) {
                 ESP_LOGI(TAG, "Desconexión IPCLOSE ...");
-
+                sim7600_reconnect_tcp_server();
             }else if(strstr(response, "+CPSI:") != NULL) { 
                 //ESP_LOGI(TAG, "validando CPSI...");
                 redService = parsePSI(response);
@@ -150,7 +151,8 @@ static void uart_task(void *arg) {
                 } 
             }else if(strstr(response, "+IPD") != NULL)  {
                 char * clean_idp = cleanResponse(response);
-                ESP_LOGI(TAG, "Leyendo CMD TCP => %s", cleanATResponse(clean_idp));
+                ESP_LOGI(TAG, "CMD TCP => %s", clean_idp);
+                ESP_LOGI(TAG, "clean CMD TCP => %s", cleanATResponse(clean_idp));
 
             }else if(strstr(response, "+CIPEVENT:") != NULL)  {
                 char * cip_event = cleanData(response, "CIPEVENT");
@@ -174,7 +176,12 @@ static void uart_task(void *arg) {
         
                 printf("Comando a enviar: %s\n", command);
                  sim7600_sendATCommand(command);
-            } else {ESP_LOGI(TAG, "RD URT: %s", response); }
+
+            } else if(strstr(response, "+CMGR:") != NULL) {
+                char * sms_long = cleanResponse(response);
+                parseSMS(sms_long);
+                //separa "clean sms en phone, command"
+            }else {ESP_LOGI(TAG, "RD URT: %s", response); }
         }
         vTaskDelay(pdMS_TO_TICKS(100));
         set_gnss_led_state(tkr.fix);
@@ -213,6 +220,7 @@ bool uartManager_sendReadUart(const char *command) {
         // Check if response contains '>'
         if (strchr(cleanedResponse, '>') != NULL) {
             ESP_LOGI(TAG, "Detected '>', returning true");
+            /// AQUI VOY A PONER LA RESPUESTA DEL SMS
             return true;
 
         } else if (strstr(cleanedResponse, "+CIPSEND:") != NULL) {
@@ -255,7 +263,7 @@ bool uartManager_sendReadUart(const char *command) {
         }
         } else if(strstr(cleanedResponse, "+CIPERROR:") != NULL) {
             sendData = false;
-            redService = sendData;
+            //redService = sendData;
             sim7600_sendATCommand("AT+CPSI?");
             char *err = cleanData(response, "AT+CIPSEND=0,");
             ESP_LOGI(TAG, "ERROR TCP:%s, estdo de la red:%d", err, redService);
@@ -294,23 +302,24 @@ int sendToServer(char * message) {
             printf("block_%d.txt", f_block);
             char * buffer = spiffs_process_blocks_buffer(f_block);
             //forma el comando lee los carateres y sumale el del comando
-            char sendCmdBuffer[20+(int)strlen(buffer)];
+            char sendCmdBuffer[30];
             snprintf(sendCmdBuffer, sizeof(sendCmdBuffer), "AT+CIPSEND=0,%d", (int)strlen(buffer)); //FORMA EL COMANDO "AT+CIPSEND=0,length"
             /*ESP_LOGI(TAG, "COMMAND to send:%s", sendCmdBuffer);
             printf("SEND BUFFER=>%s", buffer);*/
-            if(uartManager_sendReadUart(sendCmdBuffer) ){
+            if(uartManager_sendReadUart(sendCmdBuffer) ) {
+
                 if(uartManager_sendReadUart(buffer) ){
+                    ESP_LOGI(TAG, "Envío exitoso BUFFER!");
                     spiffs_delete_block(f_block); 
-                    ESP_LOGI(TAG, "Envío exitoso!");
                 }
             }
         }
-        char sendCommand[50];
+        char sendCommand[30];
         snprintf(sendCommand, sizeof(sendCommand), "AT+CIPSEND=0,%d", (int)strlen(message)); //FORMA EL COMANDO "AT+CIPSEND=0,length"
         //ESP_LOGI(TAG, "COMMAND to send:%s", sendCommand);
         if(uartManager_sendReadUart(sendCommand) ){
             if(uartManager_sendReadUart(message) ){ 
-                ESP_LOGI(TAG, "Envío exitoso!");
+                ESP_LOGI(TAG, "Envío exitoso REALTIME!");
                 return 1;
             }
         }

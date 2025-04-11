@@ -130,7 +130,7 @@ void io_monitor_task(void *arg) {
 }
 void io_manager_init() {
     gpio_set_direction(IGNITION_PIN, GPIO_MODE_INPUT);
-    xTaskCreate(io_monitor_task, "io_monitor_task", 2048, NULL, 5, NULL);
+    xTaskCreate(io_monitor_task, "io_monitor_task", 4096, NULL, 5, NULL);
 }
 bool power_get_ignition_state() {
     //return gpio_get_level(IGNITION_PIN);
@@ -138,4 +138,42 @@ bool power_get_ignition_state() {
 }
 void set_gnss_led_state(int state) {
     fixState = state; // Cambia la velocidad de parpadeo
+}
+void seco_init(void) {
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << OUTPUT_1),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&io_conf);
+}
+void out2_init(void) {
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << OUTPUT_2),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&io_conf);
+}
+void engineCutOn(void) {
+    gpio_set_level(OUTPUT_1, 1);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+}
+
+void engineCutOff(void) {
+    gpio_set_level(OUTPUT_1, 0);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+}
+/////// volver dinamicos la activación
+void active_out2(void) {
+    gpio_set_level(OUTPUT_2, 1);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+}
+void desactive_out2(void) {
+    gpio_set_level(OUTPUT_2, 0);
+    vTaskDelay(pdMS_TO_TICKS(1000));
 }

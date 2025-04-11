@@ -8,6 +8,8 @@
 #include "storageManager.h"
 
 void app_main(void) {
+    seco_init();
+    out2_init();
     nvs_init();
     storage_init();
     power_init();

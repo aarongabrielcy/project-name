@@ -21,6 +21,7 @@
 - `DLBF` → Borrar block spiffs por indice
 - `RABF` → Leer block spiffs por indice
 - `WTBF` → Leer y borrar todos los blocks spiffs por indice
+- `SAIO` → Estado Y Activación de inpus/outputs
 - `DBMD` → Modo debug
 
 # Datos guardados en NVS memoria no volatil
@@ -37,3 +38,16 @@
 # Errores GSTracker generados
 - `0` → error sending data to the server
 
+# Estructura de cadenas guardadas en spiffs
+
+- `block_n.txt` →  RABF=n (n = numero de block)
+- `block_1.txt` →  RABF=1
+
+| CMD          | CODE         | DESCRIPTION                     | RESPONSE            |
+|--------------|--------------|---------------------------------|---------------------|
+| KLRP         | 11           | Keep a live report              | <HEAD>,<IMEI>       |
+| PWCM         | 12           | Power microcontroler            |                     |
+| PWMS         | 13           | Power SIM module                |                     |
+| RTMS         | 14           | Reset SIM moduleSS              |                     |
+| RTMC         | 15           | Reset microcontroller           |                     |
+|              |
