@@ -211,6 +211,17 @@ char* clean(const char* text, const char* word) {
     
     return text_copy; // Retornar la cadena modificada
 }
+char* removeDoubleQuotesInPlace(char *str) {
+    char *src = str, *dst = str;
+    while (*src) {
+        if (*src != '\"') {  // Copia solo si el carácter no es una comilla
+            *dst++ = *src;
+        }
+        src++;
+    }
+    *dst = '\0';  // Termina la cadena modificada
+    return str;
+}
 /*char *clean(const char *response, const char *command) {
     if (response == NULL || command == NULL) {
         return NULL;
@@ -271,5 +282,7 @@ char* clean(const char* text, const char* word) {
     free(text_copy);
     return NULL;
 }*/
+
+
 
 

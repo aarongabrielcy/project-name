@@ -10,6 +10,7 @@ typedef enum {
     IGNITION_OFF,
     KEEP_ALIVE,
     TRACKING_RPT,
+    SMS_DETECTED,
     DEFAULT
 } system_event_t;
 

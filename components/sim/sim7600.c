@@ -31,11 +31,12 @@ void sim7600_basic_config() {
     bool ign_st = !power_get_ignition_state();
     sim7600_init("AT+SIMEI?");
     sim7600_init("AT+CGPS=1");
-    sim7600_init("AT+CPSI=240");
+    sim7600_init("AT+CPSI=28");
     sim7600_init("AT+NETOPEN");
     sim7600_init("AT+CIPOPEN=0,\"TCP\",\"34.196.135.179\",5200");
+    ESP_LOGI(TAG, "Ignition State: %d", ign_st);
     if (ign_st) {
-        ESP_LOGI(TAG, "Ignition State: %d", ign_st);
+        sim7600_init("AT+CGNSSINFO=30");
     } else {
         sim7600_init("AT+CGNSSINFO=255");
     }

@@ -145,7 +145,7 @@ void parseGSM(char *tokens) {
         ESP_LOGE(TAG, "Error: Datos insuficientes en GSM.");
         return;
     }
-
+    strncpy(serInf.sys_mode, values[0], sizeof(serInf.sys_mode) - 1);
     serInf.mcc = atoi(values[2]);
     serInf.mnc = atoi(values[2] + 4);
     strncpy(serInf.lac_tac, removeHexPrefix(values[3]), sizeof(serInf.lac_tac) - 1);
@@ -170,7 +170,8 @@ void parseLTE(char *tokens) {
         ESP_LOGE(TAG, "Error: Datos insuficientes en LTE.");
         return;
     }
-
+    strncpy(serInf.sys_mode, values[0], sizeof(serInf.sys_mode) - 1);
+    strncpy(serInf.oper_mode, values[1], sizeof(serInf.sys_mode) - 1);
     serInf.mcc = atoi(values[2]);
     serInf.mnc = atoi(values[2] + 4);
     strncpy(serInf.lac_tac, removeHexPrefix(values[3]), sizeof(serInf.lac_tac) - 1);

@@ -16,9 +16,8 @@
 #define TAG "SERIAL_CONSOLE"
 #define UART_NUM UART_NUM_0
 #define BUF_SIZE (1024)
-const char *cmds[CMD_COUNT] = {"DVID", "DVIM" ,"KLRP", "PWMC", "PWMS", "RTMC", "RTMS", "DRNV", "TMRP", "TKRP", "SVPT", "CLOP", "WTBF", "DLBF", "RABF", "DBMD"};
-char * value;
-static char * validCommand(const char *input);
+
+int value;
 static void processValueCmd(char *value, int cmd);
 static void processSVPT(const char *data);
 static int proccessCLOP(const char *data);
@@ -29,71 +28,14 @@ static void serialConsole_task(void *arg) {
         int len = uart_read_bytes(UART_NUM, data, BUF_SIZE - 1, pdMS_TO_TICKS(100));
         if (len > 0) {
             data[len] = '\0'; // Convertir a string
-            //ESP_LOGI(TAG, "Comando recibido: %s", (char*)data);
-            if (strncmp((char*)data, "AT", 2) == 0) {
+            if (strncmp((char*)data, "AT", 2) == 0 && SERIAL_DEBUG) {
                 // Enviar comandos AT al SIM7600
                 sim7600_sendATCommand((char*)data);
             } else {
                 value = validCommand((char*)data);
-                if(atoi(value) == 0) {
-                    printf("INVALID");
+                if(value == 0) {
+                    printf("INVALID CMD:");
                 }
-            } 
-            
-            if (strncmp((char*)data, "PWMS", 4) == 0) {
-                printf((char*)data);
-                processValueCmd(value, PWMS);
-            }else if (strncmp((char*)data, "RTMS", 4) == 0) {
-                printf((char*)data);
-                processValueCmd(value, RTMS);
-            } else if (strncmp((char*)data, "PWMC", 4) == 0) {
-                printf((char*)data);
-                processValueCmd(value, PWMC);
-            }else if (strncmp((char*)data, "TKRP", 4) == 0) { ////// SE reinicia el modulo
-                printf((char*)data);
-                processValueCmd(value, TKRP);
-            } else if (strncmp((char*)data, "RTMC", 4) == 0) {
-                printf((char*)data);
-                processValueCmd(value, RTMC);
-            } else if (strncmp((char*)data, "TMRP", 4) == 0) {
-                printf((char*)data);
-                processValueCmd(value, TMRP);
-            } else if (strncmp((char*)data, "DRNV", 4) == 0) {
-                ESP_LOGW(TAG, "buffer => %s", (char*)data);
-                printf((char*)data);
-                processValueCmd(value, DRNV);
-            } else if (strncmp((char*)data, "KLRP", 4) == 0) {
-                printf((char*)data);
-                if(atoi(value) > 10) {
-                    processValueCmd(value, KLRP);
-                }else {
-                    printf("ERROR.\n");  
-                }
-                
-            } else if (strncmp((char*)data, "SVPT", 4) == 0) {
-                printf((char*)data);
-                processValueCmd(value, SVPT);
-            } else if (strncmp((char*)data, "CLOP", 4) == 0) {
-                printf((char*)data);
-                processValueCmd(value, CLOP);
-            } else if (strncmp((char*)data, "DVID", 4) == 0) {
-                printf((char*)data);
-                processValueCmd(value, DVID);
-            } else if (strncmp((char*)data, "DVIM", 4) == 0) {
-                printf((char*)data);
-                processValueCmd(value, DVIM);
-            } else if (strncmp((char*)data, "DLBF", 4) == 0) {
-                printf((char*)data);
-                processValueCmd(value, DLBF);
-            } else if (strncmp((char*)data, "RABF", 4) == 0) {
-                printf((char*)data);
-                processValueCmd(value, RABF);
-            } else if (strncmp((char*)data, "WTBF", 4) == 0) {
-                printf((char*)data);
-                processValueCmd(value, WTBF);
-            }else if (strncmp((char*)data, "DBMD", 4) == 0) {
-                printf((char*)data);
-                processValueCmd(value, DBMD);
             }
         }
         vTaskDelay(pdMS_TO_TICKS(100));
@@ -115,34 +57,21 @@ void serialConsole_init() {
     xTaskCreate(serialConsole_task, "serial_console_task", 8192, NULL, 5, NULL);
 }
 /********* AGREGAR A UTILS **********/
-static char * validCommand(const char *input) {
-    if (input == NULL) {
-        printf("Error: Entrada nula.\n");
-        return "0";
-    }
-    // Buscar el signo '='
-    char *equalSign = strchr(input, '=');
-    if (equalSign == NULL) {
-        printf("Error: No se encontró '=' en la entrada.\n");
-        return "0";
-    }
+int validCommand(const char *input) {
+    char key[25], value[25];
 
-    // Separar clave y valor
-    size_t keyLength = equalSign - input;
-    char key[20];  // Ajustar tamaño según necesidad
-    strncpy(key, input, keyLength);
-    key[keyLength] = '\0';  // Agregar terminador de cadena
-
-    char *value = equalSign + 1;  // Apunta después del '='
-
-    // Buscar la clave en la lista de comandos
-    for (int i = 0; i < CMD_COUNT; i++) {
-        if (strcmp(key, cmds[i]) == 0) {
-            return value;
-        }
-    }
-    return "0";
+    // Usar sscanf para dividir la cadena en key y value
+    if (sscanf(input, "%[^=]=%s", key, value) == 2) {
+        printf("Key: %s\n", key);
+        printf("Value: %s\n", value);
+        processValueCmd(value, atoi(key) );
+        return 1;
+    } else {
+        printf("Formato inválido. Usa key=value.\n");
+        return 0;
+    }   
 }
+///convertir la funcion a tipo char *
 static void processValueCmd(char *value, int cmd) {
     switch (cmd) {
         case SVPT:
@@ -176,7 +105,7 @@ static void processValueCmd(char *value, int cmd) {
                 char command[50];
                 snprintf(command, sizeof(command), "AT+CGNSSINFO=%s", value);
                 printf("Comando AT: %s\n", command);
-            } else {printf("El tiempo de reporte no puede ser menor 5"); }
+            } else {printf("El tiempo de reporte no puede ser menor 5s"); }
             
             break;
         case CLOP:
@@ -218,7 +147,31 @@ static void processValueCmd(char *value, int cmd) {
                 printf("%s,OK", value);
             }
             break;
+        case CLDT:
+            if(atoi(value) == 1 ) {
+                sim7600_sendATCommand("AT+CPSI?"); 
+            } else if(atoi(value) == 0){
+                printf("%s,OK", value);
+            }
+            break;
+        case CLRP:
+            if(atoi(value) >= 60 ) {
+                char command[50];
+                snprintf(command, sizeof(command), "AT+CPSI=%s", value);
+                printf("Comando AT: %s\n", command);
+            } else {printf("El tiempo de reporte no puede ser menor 60s"); }
+            break;
+        case OUT1:
+            if(atoi(value) == 1 ) {
+                printf("OUT1=%s",value);
+                engineCutOn();
+            } else if(atoi(value) == 0){
+                printf("OUT1=%s",value);
+                engineCutOff();
+            }
+            break;
         default:
+            printf("Comando NO valido");
             break;
     };
 }
