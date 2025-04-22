@@ -6,10 +6,9 @@
 #include "nvsManager.h"
 #include "eventHandler.h"
 #include "storageManager.h"
+#include "deviceManager.h"
 
 void app_main(void) {
-    seco_init();
-    out2_init();
     nvs_init();
     storage_init();
     power_init();
@@ -20,5 +19,8 @@ void app_main(void) {
     serialConsole_init();
     io_manager_init();
     start_uart_task();
+    seco_init();
+    out2_init();
+    increment_reboot_counter(); 
     //esp_log_level_set("uartManager", ESP_LOG_NONE);  // Desactiva logs de "uartManager"
 }

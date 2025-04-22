@@ -170,6 +170,14 @@ static void processValueCmd(char *value, int cmd) {
                 engineCutOff();
             }
             break;
+        case RTCT:
+        if(atoi(value) == 1 ) {
+            int dev_rst = nvs_read_int("dev_reboots");
+            if (dev_rst != 0) {
+                printf("reboots:%d\n", dev_rst);
+            }else {printf("##cero reinicios##");}
+        }
+            break;
         default:
             printf("Comando NO valido");
             break;
