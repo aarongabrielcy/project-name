@@ -159,7 +159,7 @@ static void processValueCmd(char *value, int cmd) {
                 char command[50];
                 snprintf(command, sizeof(command), "AT+CPSI=%s", value);
                 printf("Comando AT: %s\n", command);
-            } else {printf("El tiempo de reporte no puede ser menor 60s"); }
+            } else {vTaskDelay(pdMS_TO_TICKS(5));printf("El tiempo de reporte no puede ser menor 60s"); }
             break;
         case OUT1:
             if(atoi(value) == 1 ) {

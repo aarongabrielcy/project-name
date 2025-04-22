@@ -199,6 +199,7 @@ void uartManager_sendCommand(const char *command) {
     uart_write_bytes(UART_SIM, "\r\n", 2);
 }
 bool uartManager_sendReadUart(const char *command) {
+    char *CIPSEND = "+CIPSEND:";
     char response[BUF_SIZE];
     memset(response, 0, sizeof(response));
 
@@ -223,7 +224,8 @@ bool uartManager_sendReadUart(const char *command) {
             /// AQUI VOY A PONER LA RESPUESTA DEL SMS
             return true;
 
-        } else if (strstr(cleanedResponse, "+CIPSEND:") != NULL) {
+        } 
+        else if (strstr(cleanedResponse, CIPSEND) != NULL) {
             if (cleanedResponse != NULL && command != NULL) {
                 char *cleanSend = clean(cleanedResponse, command);
                 if (cleanSend != NULL) {
@@ -255,7 +257,8 @@ bool uartManager_sendReadUart(const char *command) {
             } else {
                 char* dev_id = cleanATResponse(cleanedResponse);
                 ESP_LOGI(TAG, "IMEI parseado: %s", dev_id);
-                ESP_LOGI(TAG, "Longitud: %d", (int)strlen(dev_id));
+                vTaskDelay(pdMS_TO_TICKS(5));
+                ESP_LOGI(TAG, "Longitud: %d", strlen(dev_id));
                 if (strlen(dev_id) == 15) {
                     ESP_LOGI(TAG, "DEV_ID=>%s", dev_id);
                     nvs_save_str("dev_id", dev_id);

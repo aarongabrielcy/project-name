@@ -98,7 +98,7 @@ void power_init_ignition() {
     io_conf.pin_bit_mask = (1ULL << IGNITION_PIN);
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
-    io_conf.pull_up_en = GPIO_PULLUP_ENABLE; // Pull-up para detección de encendido
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE; // Pull-up para detección de encendido
     io_conf.intr_type = GPIO_INTR_DISABLE;
 
     gpio_config(&io_conf);
@@ -107,8 +107,9 @@ void io_monitor_task(void *arg) {
     bool last_state = gpio_get_level(IGNITION_PIN);  // Estado inicial
     ignition_state = last_state;  // Guardar estado inicial
     ESP_LOGI(TAG, "Leyendo estado de entrada ignition:%s", ignition_state ? "OFF" : "ON");
-
+    vTaskDelay(pdMS_TO_TICKS(50)); 
     esp_event_loop_handle_t loop = get_event_loop();
+    
     if (loop) {
         esp_err_t err = esp_event_post_to(loop, SYSTEM_EVENTS, 
                                           ignition_state ? IGNITION_OFF : IGNITION_ON, 
