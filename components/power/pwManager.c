@@ -106,7 +106,17 @@ void power_init_ignition() {
 void io_monitor_task(void *arg) {
     bool last_state = gpio_get_level(IGNITION_PIN);  // Estado inicial
     ignition_state = last_state;  // Guardar estado inicial
-    ESP_LOGI(TAG, "Leyendo estado de entradas y salidas...");
+    ESP_LOGI(TAG, "Leyendo estado de entrada ignition:%s", ignition_state ? "OFF" : "ON");
+
+    esp_event_loop_handle_t loop = get_event_loop();
+    if (loop) {
+        esp_err_t err = esp_event_post_to(loop, SYSTEM_EVENTS, 
+                                          ignition_state ? IGNITION_OFF : IGNITION_ON, 
+                                          NULL, 0, portMAX_DELAY);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Error enviando evento inicial: %s", esp_err_to_name(err));
+        }
+    }
     while (1) {
         bool current_state = gpio_get_level(IGNITION_PIN);
         if (current_state != last_state) {  // Detectar cambio de estado

@@ -24,7 +24,8 @@ typedef enum {
     DBMD = 26,
     CLDT = 27,
     CLRP = 28,
-    OUT1 = 29
+    OUT1 = 29,
+    RTCT = 30,
 } commands_gst_t;
 
 void serialConsole_init();

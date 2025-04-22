@@ -4,7 +4,7 @@
 #include <string.h>
 #include "esp_log.h"
 
-//static const char *TAG = "UTILS";
+static const char *TAG = "UTILS";
 
 char *cleanData(char *response, const char *command) {
     char *prefix = strstr(response, "+");
@@ -39,8 +39,13 @@ char* cleanATResponse(const char *input) {
 }
 /** modifica esta funcion para que no ponga comas ";" */
 char* cleanResponse(const char *response) {
+    if (response == NULL) {
+        ESP_LOGE(TAG, "cleanResponse recibió un puntero NULL");
+        return NULL;
+    }
     char *cleanResponse = (char *)malloc(strlen(response) + 1); // Reservar memoria
     if (cleanResponse == NULL) {
+        ESP_LOGE(TAG, "Fallo al reservar memoria en cleanResponse");
         return NULL; // Manejo de error en caso de fallo en la asignación de memoria
     }
     int j = 0;
@@ -174,11 +179,20 @@ char* removeHexPrefix(const char *hexValue) {
 
 /**quita la validacion de las comas cuando le quites a clean respose */
 char* clean(const char* text, const char* word) {
+
+    if (text == NULL || word == NULL) {
+        return NULL;
+    }
+
     char *text_copy = strdup(text);
+    if (text_copy == NULL) {
+        ESP_LOGE("UTILS", "strdup falló (sin memoria)");
+        return NULL;
+    }
     char command_clean[100];
     strncpy(command_clean, word, sizeof(command_clean) - 1);
     command_clean[sizeof(command_clean) - 1] = '\0';
-
+    
     // Eliminar la palabra "word" si se encuentra en cualquier parte del texto
     char* ok_pos = strstr(text_copy, ",OK");
     if (ok_pos != NULL) {

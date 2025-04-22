@@ -23,15 +23,18 @@
 - `WTBF` → Leer y borrar todos los blocks spiffs por indice
 - `SAIO` → Estado Y Activación de inpus/outputs
 - `DBMD` → Modo debug
+- `RTCT` → Numero de reinicios del dispositivo.
 
 # Datos guardados en NVS memoria no volatil
-- `dev_imei` → imei del modulo SIM
-- `dev_id` → id del dispositivo
-- `sim_id` → operador celular (validar al reiniciar)
-- `Keep_a_live` → tiempo de reporte de latido
-- `Time_report_tkg` → tiempo de reporte de trackeo
+- `dev_imei` → imei del modulo SIM → AT command
+- `dev_id` → id del dispositivo → AT command
+- `sim_id` → operador celular (validar al reiniciar) → AT command
+- `Keep_a_live` → tiempo de reporte de latido → UART/http/TCP/SMS
+- `Time_report_tkg` → tiempo de reporte de trackeo 
 - `dev_password` → contraseña para ingresar a modificar parametros
 - `life_time` → tiempo de vida encendido el dispositivo
+- `dev_reboots` → Reinicios del dispositivo
+- `last_evt_gen` → ultimo evento generado
 - `trackings_sent` → numero de mensajes enviados desde encendido
 - `debug_mode` → estado del modo debug
 
