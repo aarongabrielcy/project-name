@@ -64,13 +64,13 @@ void parseSMS(char *message) {
     dev_rst_count = nvs_read_int("dev_reboots");
 
     ESP_LOGI(TAG, "DEV_ID:%s, PHONE:%s, RECEI_IMEI:%s, CMD:%s, FLAG:%s, AT:%s",formatDevID(dev_imei), smsData.sender_phone, smsData.imei_received, smsData.cmd_received, smsData.sms_flag, smsData.cmdat_sms);
-    if(strcmp(formatDevID(dev_imei), smsData.imei_received) == 0){
+    if(strcmp(formatDevID(dev_imei), smsData.imei_received) == 0) {
         if(validCommand(smsData.cmd_received)) {
             smsResponse(smsData.sender_phone, smsData.sms_flag);
         }
         smsDelete(smsData.cmdat_sms);
         
-    }else {ESP_LOGI(TAG,"message:%s", formatDevID(dev_imei));}
+    } else {ESP_LOGI(TAG,"message:%s", formatDevID(dev_imei));}
 }
 
 static void smsResponse(char * phone, char *cmd_response) {
@@ -80,7 +80,7 @@ static void smsResponse(char * phone, char *cmd_response) {
     snprintf(command, sizeof(command), "AT+CMGS=\"%s\"", phone);
     printf("Comando AT: %s\n", command);
     if(sim7600_sendReadCommand(command) ) {
-    snprintf(response, sizeof(response), "%s,%s,rst:%d",formatDevID(dev_imei), cmd_response, dev_rst_count);
+      snprintf(response, sizeof(response), "%s,%s,rst:%d",formatDevID(dev_imei), cmd_response, dev_rst_count);
       sim7600_sendATCommand(response);
       sim7600_sendATCommand(ctrl_z_str);
     }

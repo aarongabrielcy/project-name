@@ -188,3 +188,12 @@ void desactive_out2(void) {
     gpio_set_level(OUTPUT_2, 0);
     vTaskDelay(pdMS_TO_TICKS(1000));
 }
+/////////// eliminar las funciones de arriba //////////
+int outputControl(int output , int state) {
+    gpio_set_level(output, state);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    // Verifica si el estado del pin coincide con el solicitado
+    int level = gpio_get_level(OUTPUT_1);
+    return (level == state) ? 1 : 0;
+}

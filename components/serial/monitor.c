@@ -57,6 +57,7 @@ void serialConsole_init() {
     xTaskCreate(serialConsole_task, "serial_console_task", 8192, NULL, 5, NULL);
 }
 /********* AGREGAR A UTILS **********/
+//con esta funcion valida el formato del comando
 int validCommand(const char *input) {
     char key[25], value[25];
 
@@ -64,7 +65,7 @@ int validCommand(const char *input) {
     if (sscanf(input, "%[^=]=%s", key, value) == 2) {
         printf("Key: %s\n", key);
         printf("Value: %s\n", value);
-        processValueCmd(value, atoi(key) );
+        processValueCmd(value, atoi(key) ); /// con esta funcion valida que exista el comando
         return 1;
     } else {
         printf("Formato inválido. Usa key=value.\n");
@@ -112,17 +113,21 @@ static void processValueCmd(char *value, int cmd) {
             proccessCLOP(value);
             break;
         case DVID:
-            char *dev_id = nvs_read_str("dev_id");
-            if (dev_id != NULL) {
-                printf("DVID:%s\n", formatDevID(dev_id) );
-            }else {printf("ERROR:");}
+            if(atoi(value) == 1 ) {
+                char *dev_id = nvs_read_str("dev_id");
+                if (dev_id != NULL) {
+                    printf("DVID:%s\n", formatDevID(dev_id) );
+                }else {printf("ERROR:");}
+            }
             break;
         case DVIM:
-        char *dev_imei = nvs_read_str("dev_id");
-            if (dev_imei != NULL) {
-                printf("DVID:%s\n", dev_imei);
-            }else {printf("ERROR:");}
-                break;
+            if(atoi(value) == 1 ) {
+                char *dev_imei = nvs_read_str("dev_id");
+                if (dev_imei != NULL) {
+                    printf("DVID:%s\n", dev_imei);
+                } else {printf("ERROR:");}
+            }
+            break;
         case DLBF:
             if(atoi(value) > 0) {
                 spiffs_delete_block(atoi(value));
@@ -138,7 +143,8 @@ static void processValueCmd(char *value, int cmd) {
             break;
         case WTBF:
             if(atoi(value) == 1) {
-                spiffs_process_and_delete_all_blocks();            }
+                spiffs_process_and_delete_all_blocks();            
+            }
             break;
         case DBMD:
             if(atoi(value) == 1 ) {
@@ -161,22 +167,34 @@ static void processValueCmd(char *value, int cmd) {
                 printf("Comando AT: %s\n", command);
             } else {vTaskDelay(pdMS_TO_TICKS(5));printf("El tiempo de reporte no puede ser menor 60s"); }
             break;
-        case OUT1:
+        case OPCT:
             if(atoi(value) == 1 ) {
                 printf("OUT1=%s",value);
-                engineCutOn();
+                outputControl(OUTPUT_1, atoi(value));
             } else if(atoi(value) == 0){
-                printf("OUT1=%s",value);
-                engineCutOff();
+                outputControl(OUTPUT_1, atoi(value));
             }
             break;
         case RTCT:
-        if(atoi(value) == 1 ) {
-            int dev_rst = nvs_read_int("dev_reboots");
-            if (dev_rst != 0) {
-                printf("reboots:%d\n", dev_rst);
-            }else {printf("##cero reinicios##");}
-        }
+            if(atoi(value) == 1 ) {
+                int dev_rst = nvs_read_int("dev_reboots");
+                if (dev_rst != 0) {
+                    printf("reboots:%d\n", dev_rst);
+                }else {printf("##cero reinicios##");}
+            }
+            break;
+        case IGST:
+            if(atoi(value) == 1 ) {
+                printf("IGST:%d", power_get_ignition_state());
+            } else { printf("ERROR"); }
+            break;
+        case SIID:
+            if(atoi(value) == 1 ) {
+                char *sim_id = nvs_read_str("sim_id");
+                if (sim_id != NULL) {
+                    printf("SIMID:%s\n", sim_id);
+                } else {printf("ERROR:");}
+            }
             break;
         default:
             printf("Comando NO valido");

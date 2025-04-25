@@ -23,10 +23,8 @@ char longitud[20];
 bool ignition = false;
 char date_time[34];
 char* dev_id;
+char* sim_id;
 bool redService = false;
-bool sendData = true;
-bool netOpen = false;
-bool cipOpen = false;
 bool configState = false;
 int event = DEFAULT;
 static int keep_alive_interval = 600000; // Valor en milisegundos (10 minutos)
@@ -111,36 +109,31 @@ static void uart_task(void *arg) {
                     default:
                         //ESP_LOGI(TAG, "SIN EVENTO ~~~~~~~~~~~~~~~~~~~~~~~~");
                         /** cuando se reincia en esta linea es por que el id está vacio */
-                        ESP_LOGW(TAG, "<head>\n<sys_mode>%s<oper>%s<cell_id>%s<mcc>%d<mnc>%d<lac>%s<rx_lvl>%d<date_time>%s,<lat>%s,<lon>%s,<speed>%.2f,<fix>%d,<ign>%d,<id>%s", 
-                           serInf.sys_mode, serInf.oper_mode, serInf.cell_id, serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.rxlvl_rsrp, date_time, latitud, longitud, tkr.speed, tkr.fix, ignition, dev_id); 
+                        ESP_LOGW(TAG, "<head>\n<sys_mode>%s<oper>%s<cell_id>%s<mcc>%d<mnc>%d<lac>%s<rx_lvl>%d<date_time>%s,<lat>%s,<lon>%s,<speed>%.2f,<fix>%d,<ign>%d,<id>%s,<ccid>%s", 
+                           serInf.sys_mode, serInf.oper_mode, serInf.cell_id, serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.rxlvl_rsrp, date_time, latitud, longitud, tkr.speed, tkr.fix, ignition, dev_id, sim_id); 
                     break;
                 }  
             } else if (strstr(response, "+NETOPEN: 0") != NULL) {
                 char *net = cleanData(response, "NETOPEN");
                 if(strstr(net, "0") != NULL) {
-                    netOpen = true;
                     ESP_LOGI(TAG, "servicio tcp activo");    
                 }
             } else if (strstr(response, "+CIPOPEN:") != NULL) {
                 char *cip = cleanData(response, "CIPOPEN");
                 if(strstr(cip, "0,0") != NULL) {
-                    cipOpen = true;
                     ESP_LOGI(TAG, "conexion a servidor tcp establecida!");
                 }
-            }/*else if (strstr(response, "+CIPSEND:") != NULL) {
-                sendData = true;
-                ESP_LOGI(TAG, "Envío exitoso!");
-          }*/else if (strstr(response,"READY") != NULL || strstr(response,"+CPIN:") != NULL) {
+            } else if (strstr(response,"READY") != NULL || strstr(response,"+CPIN:") != NULL) {
                 ESP_LOGI(TAG, "Modulo listo para recibir comandos");
                 if(!configState){
                     sim7600_basic_config();
                     configState = true;    
                 }
                 
-            }else if(strstr(response, "+IPCLOSE:") != NULL) {
+            } else if(strstr(response, "+IPCLOSE:") != NULL) {
                 ESP_LOGI(TAG, "Desconexión IPCLOSE ...");
                 sim7600_reconnect_tcp_server();
-            }else if(strstr(response, "+CPSI:") != NULL) { 
+            } else if(strstr(response, "+CPSI:") != NULL) { 
                 //ESP_LOGI(TAG, "validando CPSI...");
                 redService = parsePSI(response);
 
@@ -149,15 +142,15 @@ static void uart_task(void *arg) {
                 } else {
                     ESP_LOGI(TAG, "No fué posible parsear CPSI");
                 } 
-            }else if(strstr(response, "+IPD") != NULL)  {
+            } else if(strstr(response, "+IPD") != NULL)  {
                 char * clean_idp = cleanResponse(response);
                 ESP_LOGI(TAG, "CMD TCP => %s", clean_idp);
                 ESP_LOGI(TAG, "clean CMD TCP => %s", cleanATResponse(clean_idp));
 
-            }else if(strstr(response, "+CIPEVENT:") != NULL)  {
+            } else if(strstr(response, "+CIPEVENT:") != NULL)  {
                 char * cip_event = cleanData(response, "CIPEVENT");
                 ESP_LOGI(TAG, "CIP EVENT => %s", cip_event);
-            }else if (strstr(response, "+CMTI:") != NULL) {  
+            } else if (strstr(response, "+CMTI:") != NULL) {  
                 /**Crea una funcion peridoca de cada 2 minutos que valide si tienes mensajes por si se pierde alguno **/
                 printf("SMS Detectado, enviando comando para leer...\n");
                 // Encontrar la posición de la coma ","
@@ -180,8 +173,11 @@ static void uart_task(void *arg) {
             } else if(strstr(response, "+CMGR:") != NULL) {
                 char * sms_long = cleanResponse(response);
                 parseSMS(sms_long);
-                //separa "clean sms en phone, command"
-            }else {ESP_LOGI(TAG, "RD URT: %s", response); }
+
+            } else if(strstr(response, "PB DONE") != NULL) {
+                ESP_LOGI(TAG, "REACTIVANDO TRAKER REPORT: %s", response);
+                sim7600_sendATCommand("AT+CGNSSINFO=0");
+            } else { ESP_LOGE(TAG, "RD URT: %s", response); }
         }
         vTaskDelay(pdMS_TO_TICKS(100));
         set_gnss_led_state(tkr.fix);
@@ -199,7 +195,7 @@ void uartManager_sendCommand(const char *command) {
     uart_write_bytes(UART_SIM, "\r\n", 2);
 }
 bool uartManager_sendReadUart(const char *command) {
-    char *CIPSEND = "+CIPSEND:";
+    
     char response[BUF_SIZE];
     memset(response, 0, sizeof(response));
 
@@ -217,42 +213,68 @@ bool uartManager_sendReadUart(const char *command) {
             ESP_LOGE(TAG, "cleanResponse retornó NULL");
             return false;
         }    
-        ESP_LOGI(TAG, "Respuesta:%s", cleanedResponse );
+        ESP_LOGE(TAG, "Respuesta:%s", cleanedResponse );
         // Check if response contains '>'
         if (strchr(cleanedResponse, '>') != NULL) {
-            ESP_LOGI(TAG, "Detected '>', returning true");
+            ESP_LOGE(TAG, "Detected '>', returning true");
             /// AQUI VOY A PONER LA RESPUESTA DEL SMS
             return true;
 
-        } 
-        else if (strstr(cleanedResponse, CIPSEND) != NULL) {
+        } else if (strstr(cleanedResponse, "+CIPSEND:") != NULL) {
             if (cleanedResponse != NULL && command != NULL) {
                 char *cleanSend = clean(cleanedResponse, command);
                 if (cleanSend != NULL) {
-                    ESP_LOGI(TAG, "CIPSEND CLEAN=>%s", cleanSend);
+                    ESP_LOGE(TAG, "CIPSEND CLEAN=>%s", cleanSend);
                 } else if (cleanSend == NULL) {
                     ESP_LOGE(TAG, "clean() retornó NULL — cleanedResponse='%s', command='%s'", 
                              cleanedResponse ? cleanedResponse : "NULL",
                              command ? command : "NULL");
                     return false;
                 }
-                sendData = true;
-                return sendData;
+                 
+                return true;
             } else {
                 ESP_LOGE(TAG, "Punteros NULL antes de llamar a clean()");
                 return false;
             }
-        }
-        if(strstr(cleanedResponse, "SIMEI") != NULL) {
+        } else if(strstr(cleanedResponse, "CCID") != NULL) {
+            sim_id = nvs_read_str("sim_id");   
+            if (sim_id != NULL) {
+                ESP_LOGI(TAG, "Longitud real: %d", (int)strlen(sim_id));
+                printf("SIM ID:%s\n", sim_id);
+                if (strlen(sim_id) != 19) {
+                    printf("SIMID Incorrecto: %s\n", sim_id);
+                    nvs_delete_key(sim_id); 
+                    ///Reiniciar dispositivo
+                }else { 
+                    ESP_LOGI(TAG, "SIMID correcto: %s", sim_id);
+                    return true;
+                }    
+            } else {
+                char* sim_id = cleanATResponse(cleanedResponse);
+                ESP_LOGI(TAG, "SIM parseado: %s", sim_id);
+                vTaskDelay(pdMS_TO_TICKS(5));
+                ESP_LOGI(TAG, "Longitud: %d", strlen(sim_id));
+                if (strlen(sim_id) == 19) {
+                    ESP_LOGI(TAG, "SIM_ID=>%s", sim_id);
+                    nvs_save_str("sim_id", sim_id);
+                    return true;
+                }
+            }
+            return false; 
+
+        } else if(strstr(cleanedResponse, "SIMEI") != NULL) {
             dev_id = nvs_read_str("dev_id");
             if (dev_id != NULL) {
                 ESP_LOGI(TAG, "Longitud real: %d", (int)strlen(dev_id));
                 printf("Dev ID:%s\n", dev_id);
                 if (strlen(dev_id) != 15) {
                     printf("imei Incorrecto: %s\n", dev_id);
-                    nvs_delete_key(dev_id); 
+                    nvs_delete_key(dev_id);
+                    //REINICIAR EL DISPOSITIVO PARA QUE VUELVA A INTENTAR LEER EL IMEI 
                 }else { 
                     ESP_LOGI(TAG, "IMEI correcto: %s", dev_id);
+                    return true;
                 }    
             } else {
                 char* dev_id = cleanATResponse(cleanedResponse);
@@ -262,23 +284,22 @@ bool uartManager_sendReadUart(const char *command) {
                 if (strlen(dev_id) == 15) {
                     ESP_LOGI(TAG, "DEV_ID=>%s", dev_id);
                     nvs_save_str("dev_id", dev_id);
+                    return true;  
                 }
             }
-            return true;  
+            return false;
         } else if(strstr(cleanedResponse, "CCLK") != NULL) {
             char *cleaned_response = cleanATResponse(cleanedResponse);
-        if (cleaned_response != NULL) {
-            char *result = getFormatUTC(cleaned_response);
-            if (result != NULL) {
-                strncpy(date_time, result, sizeof(date_time) - 1);
-                date_time[sizeof(date_time) - 1] = '\0';
-            } else {
-                ESP_LOGE(TAG, "getFormatUTC retornó NULL");
+            if (cleaned_response != NULL) {
+                char *result = getFormatUTC(cleaned_response);
+                if (result != NULL) {
+                    strncpy(date_time, result, sizeof(date_time) - 1);
+                    date_time[sizeof(date_time) - 1] = '\0';
+                } else {
+                    ESP_LOGE(TAG, "getFormatUTC retornó NULL");
+                }
             }
-        }
         } else if(strstr(cleanedResponse, "+CIPERROR:") != NULL) {
-            sendData = false;
-            //redService = sendData;
             sim7600_sendATCommand("AT+CPSI?");
             char *err = cleanData(response, "AT+CIPSEND=0,");
             ESP_LOGI(TAG, "ERROR TCP:%s, estdo de la red:%d", err, redService);
@@ -293,7 +314,7 @@ bool uartManager_sendReadUart(const char *command) {
                     sim7600_reconnect_tcp_server();
                 }
             }
-            return sendData;
+            return false;
         } else if (strstr(cleanedResponse, "OK") != NULL ) { ////////// si validas solo el comando "AT" busca mejor "AT,OK"
             ESP_LOGI(TAG, "Response ends with 'OK', returning true"); 
             //sim7600_sendATCommand("AT+CPIN?");
