@@ -176,7 +176,7 @@ static void uart_task(void *arg) {
 
             } else if(strstr(response, "PB DONE") != NULL) {
                 ESP_LOGI(TAG, "REACTIVANDO TRAKER REPORT: %s", response);
-                sim7600_sendATCommand("AT+CGNSSINFO=0");
+                sim7600_sendATCommand("AT+CGNSSINFO=30");
             } else { ESP_LOGE(TAG, "RD URT: %s", response); }
         }
         vTaskDelay(pdMS_TO_TICKS(100));
@@ -246,12 +246,12 @@ bool uartManager_sendReadUart(const char *command) {
                     printf("SIMID Incorrecto: %s\n", sim_id);
                     nvs_delete_key(sim_id); 
                     ///Reiniciar dispositivo
-                }else { 
+                } else { 
                     ESP_LOGI(TAG, "SIMID correcto: %s", sim_id);
                     return true;
                 }    
             } else {
-                char* sim_id = cleanATResponse(cleanedResponse);
+                sim_id = cleanATResponse(cleanedResponse);
                 ESP_LOGI(TAG, "SIM parseado: %s", sim_id);
                 vTaskDelay(pdMS_TO_TICKS(5));
                 ESP_LOGI(TAG, "Longitud: %d", strlen(sim_id));
@@ -277,7 +277,7 @@ bool uartManager_sendReadUart(const char *command) {
                     return true;
                 }    
             } else {
-                char* dev_id = cleanATResponse(cleanedResponse);
+                dev_id = cleanATResponse(cleanedResponse);
                 ESP_LOGI(TAG, "IMEI parseado: %s", dev_id);
                 vTaskDelay(pdMS_TO_TICKS(5));
                 ESP_LOGI(TAG, "Longitud: %d", strlen(dev_id));

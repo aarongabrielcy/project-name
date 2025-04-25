@@ -82,11 +82,15 @@ static void processValueCmd(char *value, int cmd) {
             printf("cambianto el tiempo de keep: %s\n", value);
             break;
         case DRNV:
-            if (atoi(value) == 1 ) {
-                printf("borrando NVS: %s\n", value);   
+            if (value != NULL) {
+                nvs_delete_key(value);
+            }else {printf("la llave NVS no existe");}
+            /*if (atoi(value) == 1) {
+                printf("borrando NVS: %s\n", value);
+
             } else if(atoi(value) == 0) {
                 printf("Value NVS:%s", value);
-            }
+            }*/
             break;
         case RTMS:
             printf("Comando RTMS:%s\n", value);
@@ -193,7 +197,7 @@ static void processValueCmd(char *value, int cmd) {
                 char *sim_id = nvs_read_str("sim_id");
                 if (sim_id != NULL) {
                     printf("SIMID:%s\n", sim_id);
-                } else {printf("ERROR:");}
+                } else { printf("ERROR:"); }
             }
             break;
         default:
