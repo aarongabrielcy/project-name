@@ -72,7 +72,49 @@ int validCommand(const char *input) {
         return 0;
     }   
 }
-///convertir la funcion a tipo char *
+/*char processCommand(char value, int cmd) {
+    switch (cmd) {
+        case KLRP:
+            // Convierte a mayúscula si es letra minúscula
+            if (value >= 'a' && value <= 'z') {
+                return value - ('a' - 'A');
+            }
+            return value;
+        case PWMC:
+            // Convierte a minúscula si es letra mayúscula
+            if (value >= 'A' && value <= 'Z') {
+                return value + ('a' - 'A');
+            }
+            return value;
+        case PWMS:
+            // Avanza un carácter en el alfabeto
+            return value + 1;
+        case RTMS:
+            // Retrocede un carácter en el alfabeto
+            return value - 1;
+        case RTMC:
+            // Retrocede un carácter en el alfabeto
+            return value - 1;
+        case DRNV:
+            // Retrocede un carácter en el alfabeto
+            return value - 1;
+        case TMRP:
+            // Retrocede un carácter en el alfabeto
+            return value - 1;
+        case TKRP:
+            // Retrocede un carácter en el alfabeto
+            return value - 1;
+        case SVPT:
+            // Retrocede un carácter en el alfabeto
+            return value - 1;
+        case CLOP:
+            // Retrocede un carácter en el alfabeto
+            return value - 1;
+        default:
+            // Retorna el carácter original si la acción no se reconoce
+            return value;
+    }
+}*/
 static void processValueCmd(char *value, int cmd) {
     switch (cmd) {
         case SVPT:
@@ -118,17 +160,17 @@ static void processValueCmd(char *value, int cmd) {
             break;
         case DVID:
             if(atoi(value) == 1 ) {
-                char *dev_id = nvs_read_str("dev_id");
-                if (dev_id != NULL) {
-                    printf("DVID:%s\n", formatDevID(dev_id) );
+                char id[20];
+                if (nvs_read_str("device_id", id, sizeof(id)) != NULL) {
+                    printf("DVID:%s\n", id );
                 }else {printf("ERROR:");}
             }
             break;
         case DVIM:
             if(atoi(value) == 1 ) {
-                char *dev_imei = nvs_read_str("dev_id");
-                if (dev_imei != NULL) {
-                    printf("DVID:%s\n", dev_imei);
+                char simei[30];
+                if (nvs_read_str("dev_simei", simei, sizeof(simei)) != NULL) {
+                    printf("SIMEI:%s\n", simei);
                 } else {printf("ERROR:");}
             }
             break;
@@ -194,9 +236,9 @@ static void processValueCmd(char *value, int cmd) {
             break;
         case SIID:
             if(atoi(value) == 1 ) {
-                char *sim_id = nvs_read_str("sim_id");
-                if (sim_id != NULL) {
-                    printf("SIMID:%s\n", sim_id);
+                char iccid[30];
+                if (nvs_read_str("sim_id", iccid, sizeof(iccid)) != NULL) {
+                    printf("SIMID:%s\n", iccid);
                 } else { printf("ERROR:"); }
             }
             break;

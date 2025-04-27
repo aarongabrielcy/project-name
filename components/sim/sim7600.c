@@ -30,7 +30,9 @@ void sim7600_init(const char *command) {
 void sim7600_basic_config() {
     bool ign_st = !power_get_ignition_state();
     sim7600_init("AT+SIMEI?");
-    sim7600_init("AT+CCID");
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    sim7600_init("AT+CICCID");
+    vTaskDelay(pdMS_TO_TICKS(1000));
     sim7600_init("AT+CGPS=1");
     sim7600_init("AT+CPSI=28");
     sim7600_init("AT+NETOPEN");

@@ -9,7 +9,7 @@
 #include "sim7600.h"
 
 static const char *TAG = "cmdsManager";
-const char * dev_imei;
+char dev_imei[20];
 int dev_rst_count;
 smsData_t smsData = {0};  // Definición e inicialización de la variable global
 
@@ -60,7 +60,9 @@ void parseSMS(char *message) {
         tokenIndex++;
     }
 
-    dev_imei = nvs_read_str("dev_id");
+    if(nvs_read_str("dev_id", dev_imei, sizeof(dev_imei)) != NULL) {
+
+    }
     dev_rst_count = nvs_read_int("dev_reboots");
 
     ESP_LOGI(TAG, "DEV_ID:%s, PHONE:%s, RECEI_IMEI:%s, CMD:%s, FLAG:%s, AT:%s",formatDevID(dev_imei), smsData.sender_phone, smsData.imei_received, smsData.cmd_received, smsData.sms_flag, smsData.cmdat_sms);

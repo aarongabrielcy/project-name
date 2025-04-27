@@ -32,16 +32,14 @@ esp_err_t nvs_save_str(const char* key, const char* value) {
 }
 
 // Leer un string con una clave específica
-char* nvs_read_str(const char* key) {
-    static char buffer[64];  //ESPACIO RESERVADO FIJO EN MEMORIA
-    size_t required_size;
+char* nvs_read_str(char* key, char* buffer, size_t buffer_size) {
     nvs_handle_t handle;
-
+    size_t required_size;
     esp_err_t err = nvs_open(STORAGE_NAMESPACE, NVS_READONLY, &handle);
     if (err != ESP_OK) return NULL;
 
     err = nvs_get_str(handle, key, NULL, &required_size);
-    if (err != ESP_OK || required_size > sizeof(buffer)) {
+    if (err != ESP_OK || required_size > buffer_size) {
         nvs_close(handle);
         return NULL;
     }
@@ -51,6 +49,7 @@ char* nvs_read_str(const char* key) {
 
     return (err == ESP_OK) ? buffer : NULL;
 }
+
 
 // Guardar un entero con una clave específica
 esp_err_t nvs_save_int(const char* key, int value) {
