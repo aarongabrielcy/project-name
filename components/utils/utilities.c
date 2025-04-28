@@ -164,17 +164,26 @@ const char *formatDevID(const char *input) {
     output[10] = '\0'; // Asegurar terminador nulo
     return output;
 }
-char* removeHexPrefix(const char *hexValue) {
+/*char* removeHexPrefix(const char *hexValue) {
     if (hexValue == NULL) {
         return NULL;
     }
-
-    // Verificar si la cadena empieza con "0x" o "0X"
     if ((hexValue[0] == '0' && (hexValue[1] == 'x' || hexValue[1] == 'X'))) {
-        return strdup(hexValue + 2);  // Crear una copia de la cadena sin "0x"
+        return strdup(hexValue + 2); 
+    }
+    return strdup(hexValue);
+}*/
+const char* removeHexPrefix(const char *hexValue) {
+    if (hexValue == NULL) {
+        return "";
     }
 
-    return strdup(hexValue);  // Retornar copia de la cadena original
+    // Verificar si empieza con "0x" o "0X"
+    if (hexValue[0] == '0' && (hexValue[1] == 'x' || hexValue[1] == 'X')) {
+        return hexValue + 2;  // Solo avanzar el puntero
+    }
+
+    return hexValue;  // Devolver el mismo puntero
 }
 
 /**quita la validacion de las comas cuando le quites a clean respose */

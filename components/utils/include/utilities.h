@@ -8,7 +8,7 @@ char *formatTime(const char *utcTime);
 char *formatCoordinates(double coord, char direction);
 char *getFormatUTC(const char* input);
 const char *formatDevID(const char *input);
-char* removeHexPrefix(const char *hexValue);
+const char* removeHexPrefix(const char *hexValue);
 char * clean(const char *response, const char *command);
 char* removeDoubleQuotesInPlace(char *str);
 #endif

@@ -26,6 +26,7 @@ char dev_id[30];
 char cc_id[30];
 bool redService = false;
 bool configState = false;
+bool id_flag = false;
 int event = DEFAULT;
 static int keep_alive_interval = 600000; // Valor en milisegundos (10 minutos)
 
@@ -44,10 +45,16 @@ void uart_init() {
 static void uart_task(void *arg) {
     char response[256];
     char message[256];
-
+    ESP_LOGI(TAG, "Leyendo eventos del modulo SIM...");
+    if(!id_flag) {
+        if( nvs_read_str("device_id", dev_id, sizeof(dev_id)) != NULL) {
+            ESP_LOGI(TAG, "Device_ID?>%s", dev_id);
+            id_flag = true;
+        }
+    }
     while (1) {
         int len = uartManager_readEvent(response, sizeof(response));
-    
+        
         if (len > 0) {      
             if (strstr(response, "+CGNSSINFO:") != NULL ) {
                 //ESP_LOGI(TAG, "Evento GNSS detectado.");
