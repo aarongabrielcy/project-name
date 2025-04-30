@@ -9,12 +9,12 @@
 #include "sim7600.h"
 
 static const char *TAG = "cmdsManager";
-const char * dev_imei;
+char dev_imei[20];
 int dev_rst_count;
 smsData_t smsData = {0};  // Definición e inicialización de la variable global
 
 static void smsDelete(char *command);
-static void smsResponse(char * phone, char *cmd_response);
+static int smsResponse(char * phone, char *cmd_response);
 
 void parseSMS(char *message) {
     // Inicializamos los campos a cadena vacía
@@ -60,30 +60,33 @@ void parseSMS(char *message) {
         tokenIndex++;
     }
 
-    dev_imei = nvs_read_str("dev_id");
+    if(nvs_read_str("device_id", dev_imei, sizeof(dev_imei)) != NULL) {
+
+    }
     dev_rst_count = nvs_read_int("dev_reboots");
 
     ESP_LOGI(TAG, "DEV_ID:%s, PHONE:%s, RECEI_IMEI:%s, CMD:%s, FLAG:%s, AT:%s",formatDevID(dev_imei), smsData.sender_phone, smsData.imei_received, smsData.cmd_received, smsData.sms_flag, smsData.cmdat_sms);
-    if(strcmp(formatDevID(dev_imei), smsData.imei_received) == 0){
-        if(validCommand(smsData.cmd_received)) {
-            smsResponse(smsData.sender_phone, smsData.sms_flag);
+    if(strcmp(formatDevID(dev_imei), smsData.imei_received) == 0) {
+        if(smsResponse(smsData.sender_phone, processCmd(smsData.cmd_received) ) ) {
+            smsDelete(smsData.cmdat_sms);            
         }
-        smsDelete(smsData.cmdat_sms);
         
-    }else {ESP_LOGI(TAG,"message:%s", formatDevID(dev_imei));}
+    } else {ESP_LOGI(TAG,"message:%s", formatDevID(dev_imei));}
 }
 
-static void smsResponse(char * phone, char *cmd_response) {
+static int smsResponse(char * phone, char *cmd_response) {
     char command[50];
     char response[100];
     char ctrl_z_str[2] = { 0x1A, '\0' };  // Cadena con Ctrl+Z y terminador nulo
     snprintf(command, sizeof(command), "AT+CMGS=\"%s\"", phone);
     printf("Comando AT: %s\n", command);
     if(sim7600_sendReadCommand(command) ) {
-    snprintf(response, sizeof(response), "%s,%s,rst:%d",formatDevID(dev_imei), cmd_response, dev_rst_count);
+      snprintf(response, sizeof(response), "%s,%s,",formatDevID(dev_imei), cmd_response);
       sim7600_sendATCommand(response);
       sim7600_sendATCommand(ctrl_z_str);
+      return 1;
     }
+    return 0;
 }
 
 static void smsDelete(char *command) {

@@ -20,7 +20,7 @@ esp_err_t nvs_init(void);
 
 // Guardar y leer strings (ejemplo: dev_id, WiFi SSID, etc.)
 esp_err_t nvs_save_str(const char* key, const char* value);
-char* nvs_read_str(const char* key);
+char* nvs_read_str(char* key, char* buffer, size_t buffer_size);
 
 // Guardar y leer enteros (ejemplo: modo de configuración)
 esp_err_t nvs_save_int(const char* key, int value);

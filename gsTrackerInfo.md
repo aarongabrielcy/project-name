@@ -9,8 +9,8 @@
 
 ## Nomenclaturas usadas en comandos
 - `KLRP` → keep a live report
-- `PWMC` → power microcontroler
-- `PWMS` → power modulo SIM
+- `PWMC` → * power microcontroler
+- `PWMS` → * power modulo SIM
 - `RTMC` → reset microcontroler
 - `RTMS` → reset modulo SIM
 - `DRNV` → delete read NVS
@@ -19,11 +19,16 @@
 - `SVPT` → servidor y puerto TCP
 - `CLOP` → operador celular
 - `DLBF` → Borrar block spiffs por indice
-- `RABF` → Leer block spiffs por indice
+- `RABF` → Leer block spiffs por indice (ECEPTO SMS)
 - `WTBF` → Leer y borrar todos los blocks spiffs por indice
 - `SAIO` → Estado Y Activación de inpus/outputs
 - `DBMD` → Modo debug
 - `RTCT` → Numero de reinicios del dispositivo.
+- `CLDT` → Cellular data
+- `CLRP` → Cellular report 
+- `OPCT` → Output control
+- `OPST` → Output state
+- `RTDV` → Reinicio del dispositivo completo
 
 # Datos guardados en NVS memoria no volatil
 - `dev_imei` → imei del modulo SIM → AT command

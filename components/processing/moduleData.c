@@ -155,8 +155,7 @@ void parseGSM(char *tokens) {
     /*ESP_LOGI(TAG, "GSM Parseado: MCC:%d, MNC:%d, LAC:%s, CellID:%s, RXLVL:%d",
              serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);*/
 }
-
-void parseLTE(char *tokens) {
+/*void parseLTE(char *tokens) {
     char *values[15] = {NULL};  
     int count = 0;
 
@@ -177,7 +176,40 @@ void parseLTE(char *tokens) {
     strncpy(serInf.lac_tac, removeHexPrefix(values[3]), sizeof(serInf.lac_tac) - 1);
     strncpy(serInf.cell_id, values[4], sizeof(serInf.cell_id) - 1);
     serInf.rxlvl_rsrp = atoi(values[11]);
+}*/
+void parseLTE(char *tokens) {
+    char *values[15] = {NULL};  
+    int count = 0;
 
+    // Separar tokens
+    char *token = strtok(tokens, ",");
+    while (token != NULL && count < 15) {
+        values[count++] = token;
+        token = strtok(NULL, ",");
+    }
+
+    if (count < 14) {
+        ESP_LOGE(TAG, "Error: Datos insuficientes en LTE.");
+        return;
+    }
+
+    strncpy(serInf.sys_mode, values[0], sizeof(serInf.sys_mode) - 1);
+    serInf.sys_mode[sizeof(serInf.sys_mode) - 1] = '\0';
+
+    strncpy(serInf.oper_mode, values[1], sizeof(serInf.oper_mode) - 1);
+    serInf.oper_mode[sizeof(serInf.oper_mode) - 1] = '\0';
+
+    serInf.mcc = atoi(values[2]);
+    serInf.mnc = atoi(values[2] + 4); // Según tu formato MCC-MNC, sigues leyendo bien
+
+    const char *lac_tac_clean = removeHexPrefix(values[3]);
+    strncpy(serInf.lac_tac, lac_tac_clean, sizeof(serInf.lac_tac) - 1);
+    serInf.lac_tac[sizeof(serInf.lac_tac) - 1] = '\0';
+
+    strncpy(serInf.cell_id, values[4], sizeof(serInf.cell_id) - 1);
+    serInf.cell_id[sizeof(serInf.cell_id) - 1] = '\0';
+
+    serInf.rxlvl_rsrp = atoi(values[11]);
     /*ESP_LOGI(TAG, "LTE Parseado: MCC:%d, MNC:%d, TAC:%s, CellID:%s, RSRP:%d",
              serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);*/
 }
