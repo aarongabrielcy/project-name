@@ -33,6 +33,7 @@ static char *proccessQuery(ParsedCommand *parsed);
 static char *proccessQueryWithValue(ParsedCommand *parsed);
 static char *processSVPT(const char *data);
 static char *proccessCLOP(const char *data);
+static char * resetDevice();
 
 static void serialConsole_task(void *arg) {
     uint8_t data[BUF_SIZE];
@@ -85,7 +86,7 @@ void serialConsole_init() {
         return 0;
     }   
 }*/
-const char *processCmd(const char *command) {
+char *processCmd(const char *command) {
     static char buffer[256];  // Buffer estático compartido
     ParsedCommand cmd;
 
@@ -203,9 +204,10 @@ char *proccessAction(ParsedCommand *parsed) {
             return processSVPT(parsed->value);
         case CLOP:
             return proccessCLOP(parsed->value);
+        case RTDV:
+            return resetDevice(parsed->value);
         default:
-            
-        return "NA";
+            return "NA";
     }
 }
 char *proccessQuery(ParsedCommand *parsed) {
@@ -405,4 +407,10 @@ static char *processSVPT(const char *data) {
     }    
 }
 
+static char * resetDevice(const char *value) {
+    if(atoi(value) == 1 ) {
+        return "RST";
+    }
+    else { return "ERR"; }
+}
 
