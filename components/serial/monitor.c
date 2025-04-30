@@ -1,4 +1,5 @@
 #include "monitor.h"
+#include <ctype.h>
 #include "uartManager.h"
 #include "sim7600.h"
 #include "network.h"
@@ -17,10 +18,21 @@
 #define UART_NUM UART_NUM_0
 #define BUF_SIZE (1024)
 
-int value;
-static void processValueCmd(char *value, int cmd);
-static void processSVPT(const char *data);
-static int proccessCLOP(const char *data);
+//int value;
+
+typedef struct {
+    int number;
+    char symbol;
+    char value[64];  // Arreglo para almacenar el valor
+} ParsedCommand;
+char id[20];
+//static void processValueCmd(char *value, int cmd);
+static int validateCommand(const char *input,  ParsedCommand *parsed);
+static char *proccessAction(ParsedCommand *parsed);
+static char *proccessQuery(ParsedCommand *parsed);
+static char *proccessQueryWithValue(ParsedCommand *parsed);
+static char *processSVPT(const char *data);
+static char *proccessCLOP(const char *data);
 
 static void serialConsole_task(void *arg) {
     uint8_t data[BUF_SIZE];
@@ -32,10 +44,11 @@ static void serialConsole_task(void *arg) {
                 // Enviar comandos AT al SIM7600
                 sim7600_sendATCommand((char*)data);
             } else {
-                value = validCommand((char*)data);
+                ESP_LOGI(TAG,"%s",processCmd((char*)data));
+                /*value = validCommand((char*)data);
                 if(value == 0) {
                     printf("INVALID CMD:");
-                }
+                }*/
             }
         }
         vTaskDelay(pdMS_TO_TICKS(100));
@@ -58,7 +71,7 @@ void serialConsole_init() {
 }
 /********* AGREGAR A UTILS **********/
 //con esta funcion valida el formato del comando
-int validCommand(const char *input) {
+/*int validCommand(const char *input) {
     char key[25], value[25];
 
     // Usar sscanf para dividir la cadena en key y value
@@ -71,51 +84,156 @@ int validCommand(const char *input) {
         printf("Formato inválido. Usa key=value.\n");
         return 0;
     }   
-}
-/*char processCommand(char value, int cmd) {
-    switch (cmd) {
-        case KLRP:
-            // Convierte a mayúscula si es letra minúscula
-            if (value >= 'a' && value <= 'z') {
-                return value - ('a' - 'A');
-            }
-            return value;
-        case PWMC:
-            // Convierte a minúscula si es letra mayúscula
-            if (value >= 'A' && value <= 'Z') {
-                return value + ('a' - 'A');
-            }
-            return value;
-        case PWMS:
-            // Avanza un carácter en el alfabeto
-            return value + 1;
-        case RTMS:
-            // Retrocede un carácter en el alfabeto
-            return value - 1;
-        case RTMC:
-            // Retrocede un carácter en el alfabeto
-            return value - 1;
-        case DRNV:
-            // Retrocede un carácter en el alfabeto
-            return value - 1;
-        case TMRP:
-            // Retrocede un carácter en el alfabeto
-            return value - 1;
-        case TKRP:
-            // Retrocede un carácter en el alfabeto
-            return value - 1;
-        case SVPT:
-            // Retrocede un carácter en el alfabeto
-            return value - 1;
-        case CLOP:
-            // Retrocede un carácter en el alfabeto
-            return value - 1;
-        default:
-            // Retorna el carácter original si la acción no se reconoce
-            return value;
-    }
 }*/
-static void processValueCmd(char *value, int cmd) {
+const char *processCmd(const char *command) {
+    static char buffer[256];  // Buffer estático compartido
+    ParsedCommand cmd;
+
+    switch (validateCommand(command, &cmd)) {
+        case EMPTY:
+            snprintf(buffer, sizeof(buffer), "%s%s", command, "EMPTY CMD");
+            return buffer;
+
+        case QUERY_WITHOUT_VALUE:
+            snprintf(buffer, sizeof(buffer), "%d%s&%s", cmd.number, cmd.value, proccessQuery(&cmd));
+            return buffer;
+
+        case ACTION:
+            snprintf(buffer, sizeof(buffer), "%d%c%s&%s", cmd.number, cmd.symbol, cmd.value, proccessAction(&cmd));
+            return buffer;
+
+        case INVALID_CMD:
+            snprintf(buffer, sizeof(buffer), "%s%s", command, "INVALID CMD");
+            return buffer;
+
+        case INVALID_SYMBOL:
+            snprintf(buffer, sizeof(buffer), "%s%s", command, "INVALID SYMBOL");
+            return buffer;
+
+        case INVALID_ACTION:
+            snprintf(buffer, sizeof(buffer), "%s%s", command, "INVALID ACTION");
+            return buffer;
+
+        case INVALID_NUMBER:
+            snprintf(buffer, sizeof(buffer), "%s%s", command, "INVALID NUMBER");
+            return buffer;
+
+        case QUERY_WITH_VALUE:
+            snprintf(buffer, sizeof(buffer), "%d%c%s&%s", cmd.number, cmd.symbol, cmd.value, proccessQueryWithValue(&cmd));
+            return buffer;
+
+        case INVALID_QUERY_VALUE:
+            snprintf(buffer, sizeof(buffer), "%s%s", command, "INVALID QUERY VALUE");
+            return buffer;
+
+        case INVALID_END_SYMBOL:
+            snprintf(buffer, sizeof(buffer), "%s%s", command, "INVALID END SYMBOL");
+            return buffer;
+
+        default:
+            snprintf(buffer, sizeof(buffer), "%s%s", command, "NO RESULT");
+            return buffer;
+    }
+}
+static int validateCommand(const char *input, ParsedCommand *parsed) {
+
+    if (input == NULL || *input == '\0' || parsed == NULL) {
+        return EMPTY;
+    }
+
+    int i = 0;
+    while (isdigit((unsigned char)input[i])) {
+        i++;
+    }
+    if (i == 0) {
+        return INVALID_CMD;
+    }
+
+    // Guardar número
+    char numberStr[6] = {0};
+    if (i >= sizeof(numberStr)) {
+        return INVALID_NUMBER;
+    }
+    strncpy(numberStr, input, i);
+    parsed->number = atoi(numberStr);
+
+    // Verificar símbolo
+    char symbol = input[i];
+    if (symbol != '#' && symbol != '?') {
+        return INVALID_SYMBOL;
+    }
+    parsed->symbol = symbol;
+
+    const char *value = input + i + 1;
+
+    // Verificar terminación en '$'
+    const char *end = strchr(value, '$');
+    if (end == NULL) {
+        return INVALID_END_SYMBOL;
+    }
+
+    int len = end - value;
+    if (len >= sizeof(parsed->value)) {
+        len = sizeof(parsed->value) - 1;
+    }
+    strncpy(parsed->value, value, len);
+    parsed->value[len] = '\0';
+
+    // Evaluar tipo de comando según el símbolo
+    if (symbol == '#') {
+        if (parsed->value[0] == '\0') {
+            return INVALID_ACTION;
+        }
+        return ACTION;
+    } else if (symbol == '?') {
+        if (parsed->value[0] == '\0') {
+            return QUERY_WITHOUT_VALUE;
+        }
+        if (!isdigit((unsigned char)parsed->value[0]) || parsed->value[1] != '\0') {
+            return INVALID_QUERY_VALUE;
+        }
+        return QUERY_WITH_VALUE;
+    }
+    ESP_LOGI(TAG, "Saliendo de la validación...");
+    return INVALID_CMD;
+}
+char *proccessAction(ParsedCommand *parsed) {
+    switch (parsed->number) {
+        case SVPT:
+            return processSVPT(parsed->value);
+        case CLOP:
+            return proccessCLOP(parsed->value);
+        default:
+            
+        return "NA";
+    }
+}
+char *proccessQuery(ParsedCommand *parsed) {
+    switch (parsed->number) {
+        case DVID:
+            if (nvs_read_str("device_id", id, sizeof(id)) != NULL) {
+                return id;
+            }else { return "ERR"; }
+        default:
+        return "NA";
+    }
+}
+
+char *proccessQueryWithValue(ParsedCommand *parsed) {
+    switch (parsed->number) {
+        case OPST: 
+            if(atoi(parsed->value) == 1) {
+                return "1";
+            }else if(atoi(parsed->value) == 2) {
+                return "1";
+            }
+        return "0";
+        default:
+            return "NA";
+        break;
+    }
+}
+/*static void processValueCmd(char *value, int cmd) {
     switch (cmd) {
         case SVPT:
             processSVPT(value);
@@ -127,12 +245,12 @@ static void processValueCmd(char *value, int cmd) {
             if (value != NULL) {
                 nvs_delete_key(value);
             }else {printf("la llave NVS no existe");}
-            /*if (atoi(value) == 1) {
+            if (atoi(value) == 1) {
                 printf("borrando NVS: %s\n", value);
 
             } else if(atoi(value) == 0) {
                 printf("Value NVS:%s", value);
-            }*/
+            }
             break;
         case RTMS:
             printf("Comando RTMS:%s\n", value);
@@ -246,29 +364,25 @@ static void processValueCmd(char *value, int cmd) {
             printf("Comando NO valido");
             break;
     };
-}
-static int proccessCLOP(const char *data) {
+}*/
+static char *proccessCLOP(const char *data) {
     char command[99];
 snprintf(command, sizeof(command), "AT+CGDCONT=1,\"IP\",\"%s\"", data);
     printf("Comando AT: %s\n", command);
     if(1){
-        printf("OK");
-        return 1;
+        return "OK1";
     }else {
-        return 0;
-        printf("ERROR");
+        return "ERROR";
     }
-    return 0;
 }
-static void processSVPT(const char *data) {
+static char *processSVPT(const char *data) {
     char server[32];  // Almacena la IP
     char port[6];     // Almacena el puerto (máximo 5 dígitos + terminador)
 
     // Buscar la posición del ':' en la cadena
     char *ptr = strchr(data, ':');
     if (ptr == NULL) {
-        printf("Error: formato incorrecto\n");
-        return;
+        return "Error format";
     }
     // Copiar la parte de la IP antes de ':'
     size_t len = ptr - data;
@@ -285,9 +399,9 @@ static void processSVPT(const char *data) {
     // Imprimir el comando resultante
     printf("Comando AT: %s\n", command);
     if(1){
-        printf("OK");
+        return "OK2";
     }else {
-        printf("ERROR");
+        return "ERROR";
     }    
 }
 

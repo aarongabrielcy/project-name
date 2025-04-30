@@ -352,7 +352,7 @@ bool uartManager_sendReadUart(const char *command) {
             return true;
         }
     } else {
-        ESP_LOGW(TAG, "No hubo respuesta del módulo.");
+        ESP_LOGW(TAG, "Respuesta de comando No Procesado...");
         return false;
     }
     return false;

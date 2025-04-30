@@ -194,6 +194,11 @@ int outputControl(int output , int state) {
     vTaskDelay(pdMS_TO_TICKS(1000));
 
     // Verifica si el estado del pin coincide con el solicitado
-    int level = gpio_get_level(OUTPUT_1);
+    int level = gpio_get_level(output);
     return (level == state) ? 1 : 0;
+}
+int outputState(int output) {
+  
+    int level = gpio_get_level(output);
+    return level ? 1 : 0;
 }

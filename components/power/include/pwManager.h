@@ -32,5 +32,5 @@ void engineCutOff(void);
 void active_out2(void);
 void desactive_out2(void);
 int outputControl(int output , int state);
-
+int outputState(int output);
 #endif
