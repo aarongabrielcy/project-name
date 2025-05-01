@@ -30,6 +30,7 @@
 - `OPST` → Output state
 - `RTDV` → Reinicio del dispositivo completo
 
+
 # Datos guardados en NVS memoria no volatil
 - `dev_imei` → imei del modulo SIM → AT command
 - `dev_id` → id del dispositivo → AT command
@@ -42,7 +43,7 @@
 - `last_evt_gen` → ultimo evento generado
 - `trackings_sent` → numero de mensajes enviados desde encendido
 - `debug_mode` → estado del modo debug
-
+- `pass_reset` → contraseña para reiniciar el dispositivo
 # Errores GSTracker generados
 - `0` → error sending data to the server
 

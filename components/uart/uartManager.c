@@ -330,6 +330,10 @@ bool uartManager_sendReadUart(const char *command) {
                     ESP_LOGE(TAG, "getFormatUTC retornó NULL");
                 }
             }
+        } else if (strstr(cleanedResponse,"CIPOPEN") != NULL) {
+            ESP_LOGI(TAG, "READ CIPOPEN");
+            return true;
+
         } else if(strstr(cleanedResponse, "+CIPERROR:") != NULL) {
             sim7600_sendATCommand("AT+CPSI?");
             char *err = cleanData(response, "AT+CIPSEND=0,");
