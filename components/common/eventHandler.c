@@ -8,7 +8,7 @@ ESP_EVENT_DEFINE_BASE(SYSTEM_EVENTS);
 
 static esp_event_loop_handle_t event_loop_handle = NULL;
 static esp_timer_handle_t keep_alive_timer = NULL;
-static uint32_t keep_alive_interval = 600000; // 10 minutos por defecto
+static uint32_t keep_alive_interval = 1200000; // 20 minutos por defecto / 10 minutos: 600000
 
 static void keep_alive_callback(void *arg) {
     uint32_t keep_alive_data = keep_alive_interval;

@@ -41,6 +41,10 @@ void power_off_module() {
     gpio_set_direction(POWER_SIM_PIN, GPIO_MODE_OUTPUT);
     gpio_set_level(POWER_SIM_PIN, 0);
 }
+int state_module() {
+    int state = gpio_get_level(POWER_SIM_PIN);
+    return state ? 1 : 0;
+}
 // Reiniciar el ESP32
 void power_restart() {
     esp_restart();
@@ -62,6 +66,7 @@ void power_press_key() {
     vTaskDelay(pdMS_TO_TICKS(1000));
     gpio_set_level(POWER_KEY_PIN, 1);
     vTaskDelay(pdMS_TO_TICKS(3000));
+    gpio_set_level(POWER_KEY_PIN, 0);
 }
 void led_task(void *arg) {
     TickType_t lastWakeTime = xTaskGetTickCount();
@@ -194,11 +199,14 @@ int outputControl(int output , int state) {
     vTaskDelay(pdMS_TO_TICKS(1000));
 
     // Verifica si el estado del pin coincide con el solicitado
-    int level = gpio_get_level(output);
+    int level = outputState(output);
+    ESP_LOGI(TAG, "Level output:%d, state output:%d", level, state);
     return (level == state) ? 1 : 0;
 }
 int outputState(int output) {
   
     int level = gpio_get_level(output);
+    ESP_LOGI(TAG, "OUT STATE:%d", level);
     return level ? 1 : 0;
 }
+

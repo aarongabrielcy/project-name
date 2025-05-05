@@ -38,7 +38,7 @@ typedef enum {
     DLBF = 16,
     CLRP = 17,
     RTDV = 18,
-    OPCT = 19
+    OPCT = 19,
   } cmd_action_t;
   
   typedef enum {
@@ -67,6 +67,6 @@ typedef enum {
 } type_command_t;
 
 void serialConsole_init();
-const char *processCmd(const char *command);
+char *processCmd(const char *command);
 //int validCommand(const char *input);
 #endif

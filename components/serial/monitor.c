@@ -26,6 +26,8 @@ typedef struct {
     char value[64];  // Arreglo para almacenar el valor
 } ParsedCommand;
 char id[20];
+char ccid[25];
+
 //static void processValueCmd(char *value, int cmd);
 static int validateCommand(const char *input,  ParsedCommand *parsed);
 static char *proccessAction(ParsedCommand *parsed);
@@ -33,6 +35,7 @@ static char *proccessQuery(ParsedCommand *parsed);
 static char *proccessQueryWithValue(ParsedCommand *parsed);
 static char *processSVPT(const char *data);
 static char *proccessCLOP(const char *data);
+static char * resetDevice();
 
 static void serialConsole_task(void *arg) {
     uint8_t data[BUF_SIZE];
@@ -85,7 +88,7 @@ void serialConsole_init() {
         return 0;
     }   
 }*/
-const char *processCmd(const char *command) {
+char *processCmd(const char *command) {
     static char buffer[256];  // Buffer estático compartido
     ParsedCommand cmd;
 
@@ -203,33 +206,61 @@ char *proccessAction(ParsedCommand *parsed) {
             return processSVPT(parsed->value);
         case CLOP:
             return proccessCLOP(parsed->value);
+        case RTDV:
+            return resetDevice(parsed->value);
+        case OPCT:
+        if(atoi(parsed->value) == 1 ) {
+             if(outputControl(OUTPUT_1, atoi(parsed->value)) ) {
+                return "ON";
+             } else { return "ERR ON"; }
+        } else if(atoi(parsed->value) == 0) {
+            if(outputControl(OUTPUT_1, atoi(parsed->value)) ) {
+                return "OFF";
+             } else { return "ERR OFF"; }
+        }
+        return "NA"; 
         default:
-            
-        return "NA";
+            return "NOT FOUND";
     }
 }
 char *proccessQuery(ParsedCommand *parsed) {
+    static char buffer[32];
     switch (parsed->number) {
         case DVID:
             if (nvs_read_str("device_id", id, sizeof(id)) != NULL) {
                 return id;
             }else { return "ERR"; }
+        case RTCT:
+            int value = nvs_read_int("dev_reboots");
+            snprintf(buffer, sizeof(buffer), "%d", value);  // convierte el int a string
+            return buffer;
+        case SIID:
+            if (nvs_read_str("sim_id", ccid, sizeof(ccid)) != NULL) {
+                return ccid;
+            }else { return "ERR"; }
+        case TKRP: 
+            esp_event_loop_handle_t loop = get_event_loop();            
+            if (loop) {
+                esp_err_t err = esp_event_post_to(loop, SYSTEM_EVENTS, TRACKING_RPT, NULL, 0, portMAX_DELAY);
+                if (err == ESP_OK) {
+                    return "OK";  // El evento se propagó correctamente
+                } else {
+                    return "ERR";  // Falló al propagar
+                }
+            } else {
+                return "ERR";  // El event loop no está disponible
+            }
         default:
-        return "NA";
+            return "NOT FOUND";
     }
 }
 
 char *proccessQueryWithValue(ParsedCommand *parsed) {
     switch (parsed->number) {
         case OPST: 
-            if(atoi(parsed->value) == 1) {
-                return "1";
-            }else if(atoi(parsed->value) == 2) {
-                return "1";
-            }
-        return "0";
+            return outputState(atoi(parsed->value))? "ON" : "OFF";
         default:
-            return "NA";
+            return "NOT FOUND";
         break;
     }
 }
@@ -398,11 +429,17 @@ static char *processSVPT(const char *data) {
     snprintf(command, sizeof(command), "AT+CIPOPEN=0,\"TCP\",\"%s\",%s", server, port);
     // Imprimir el comando resultante
     printf("Comando AT: %s\n", command);
-    if(1){
-        return "OK2";
+    if(sim7600_sendReadCommand(command) ){
+        return "OK";
     }else {
-        return "ERROR";
+        return "ERR";
     }    
 }
 
+static char * resetDevice(const char *value) {
+    if(atoi(value) == 1 ) { ///////// cambia el 1 por una contraseña (pass_reset)
+        return "RST";
+    }
+    else { return "ERR"; }
+}
 
