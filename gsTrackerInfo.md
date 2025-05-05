@@ -15,7 +15,7 @@
 - `RTMS` → reset modulo SIM
 - `DRNV` → delete read NVS
 - `TMRP` → time report tracking
-- `TKRP` → tracking report
+- `TKRP` → emmit tracking report
 - `SVPT` → servidor y puerto TCP
 - `CLOP` → operador celular
 - `DLBF` → Borrar block spiffs por indice

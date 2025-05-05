@@ -10,6 +10,7 @@
 #include "nvsManager.h"
 #include "sim7600.h"
 #include "pwManager.h"
+#include "eventHandler.h"
 
 static const char *TAG = "cmdsManager";
 char dev_imei[20];
@@ -71,10 +72,12 @@ void parseSMS(char *message) {
     ESP_LOGI(TAG, "DEV_ID:%s, PHONE:%s, RECEI_IMEI:%s, CMD:%s, FLAG:%s, AT:%s",formatDevID(dev_imei), smsData.sender_phone, smsData.imei_received, smsData.cmd_received, smsData.sms_flag, smsData.cmdat_sms);
     if(strcmp(formatDevID(dev_imei), smsData.imei_received) == 0) {
         char *responseCMD = processCmd(smsData.cmd_received);
+        vTaskDelay(pdMS_TO_TICKS(7000));
         if(smsResponse(smsData.sender_phone, responseCMD ) ) {
+            vTaskDelay(pdMS_TO_TICKS(3000));
             smsDelete(smsData.cmdat_sms);
             if(strcmp(responseCMD, "18#1&RST") == 0) {
-                vTaskDelay(pdMS_TO_TICKS(5000));
+                vTaskDelay(pdMS_TO_TICKS(2000));
                 power_off_module();
                 if(!state_module() ) {
                     power_restart();
@@ -89,7 +92,7 @@ static int smsResponse(char * phone, char *cmd_response) {
     char response[100];
     char ctrl_z_str[2] = { 0x1A, '\0' };  // Cadena con Ctrl+Z y terminador nulo
     snprintf(command, sizeof(command), "AT+CMGS=\"%s\"", phone);
-    printf("Comando AT: %s\n", command);
+    ESP_LOGI(TAG, "SEND AT_CMD: %s\n", command);
     if(sim7600_sendReadCommand(command) ) {
       snprintf(response, sizeof(response), "%s,%s",formatDevID(dev_imei), cmd_response);
       sim7600_sendATCommand(response);
@@ -102,10 +105,10 @@ static int smsResponse(char * phone, char *cmd_response) {
 static void smsDelete(char *command) {
     const char *pos = strchr(command, '=');
     if (pos != NULL) {
-        printf("DELETE SMS:%s",pos + 1);
+        ESP_LOGI(TAG, "DELETE SMS:%s",pos + 1);
         char command[50];
         snprintf(command, sizeof(command), "AT+CMGD=%s", pos+1);
-        printf("Comando AT: %s\n", command);
+        ESP_LOGI(TAG, "SED AT: %s\n", command);
         sim7600_sendATCommand(command);
     }
 }

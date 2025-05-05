@@ -413,19 +413,24 @@ static void system_event_handler(void *handler_arg, esp_event_base_t base, int32
             sim7600_sendATCommand("AT+CPSI?");
             sim7600_sendATCommand("AT+CGNSSINFO=30");
             stop_keep_alive_timer();
-            break;
+        break;
         case IGNITION_OFF:
             ignition = false;
             event = IGNITION_OFF;
             ESP_LOGI(TAG, "Ignition=> APAGADA");
             sim7600_sendATCommand("AT+CGNSSINFO");
             start_keep_alive_timer();     
-            break;
+        break;
         case KEEP_ALIVE:
             event = KEEP_ALIVE;
             ESP_LOGI(TAG, "Evento KEEP_ALIVE: han pasado %d minutos", keep_alive_interval / 60000);
             sim7600_sendATCommand("AT+CGNSSINFO");    
-            break;
+        break;
+        case TRACKING_RPT:
+            event = TRACKING_RPT;
+            ESP_LOGI(TAG, "Generando TRACKING_RPT suscrito");
+            sim7600_sendATCommand("AT+CGNSSINFO");  // o la acción que desees
+        break;
     }
 }
 void start_uart_task(void) {

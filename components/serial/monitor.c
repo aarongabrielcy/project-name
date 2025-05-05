@@ -212,14 +212,15 @@ char *proccessAction(ParsedCommand *parsed) {
         if(atoi(parsed->value) == 1 ) {
              if(outputControl(OUTPUT_1, atoi(parsed->value)) ) {
                 return "ON";
-             }
-        } else if(atoi(parsed->value) == 0){
+             } else { return "ERR ON"; }
+        } else if(atoi(parsed->value) == 0) {
             if(outputControl(OUTPUT_1, atoi(parsed->value)) ) {
                 return "OFF";
-             }
+             } else { return "ERR OFF"; }
         }
+        return "NA"; 
         default:
-            return "NA";
+            return "NOT FOUND";
     }
 }
 char *proccessQuery(ParsedCommand *parsed) {
@@ -237,22 +238,29 @@ char *proccessQuery(ParsedCommand *parsed) {
             if (nvs_read_str("sim_id", ccid, sizeof(ccid)) != NULL) {
                 return ccid;
             }else { return "ERR"; }
+        case TKRP: 
+            esp_event_loop_handle_t loop = get_event_loop();            
+            if (loop) {
+                esp_err_t err = esp_event_post_to(loop, SYSTEM_EVENTS, TRACKING_RPT, NULL, 0, portMAX_DELAY);
+                if (err == ESP_OK) {
+                    return "OK";  // El evento se propagó correctamente
+                } else {
+                    return "ERR";  // Falló al propagar
+                }
+            } else {
+                return "ERR";  // El event loop no está disponible
+            }
         default:
-            return "NA";
+            return "NOT FOUND";
     }
 }
 
 char *proccessQueryWithValue(ParsedCommand *parsed) {
     switch (parsed->number) {
         case OPST: 
-            if(atoi(parsed->value) == 1) {
-                return "1";
-            }else if(atoi(parsed->value) == 2) {
-                return "1";
-            }
-        return "0";
+            return outputState(atoi(parsed->value))? "ON" : "OFF";
         default:
-            return "NA";
+            return "NOT FOUND";
         break;
     }
 }
