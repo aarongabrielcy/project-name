@@ -2,7 +2,6 @@
 #include <ctype.h>
 #include "uartManager.h"
 #include "sim7600.h"
-#include "network.h"
 #include "pwManager.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -13,6 +12,7 @@
 #include "eventHandler.h"
 #include "utilities.h"
 #include "storageManager.h"
+#include "netManager.h"
 
 #define TAG "SERIAL_CONSOLE"
 #define UART_NUM UART_NUM_0
@@ -27,6 +27,7 @@ typedef struct {
 } ParsedCommand;
 char id[20];
 char ccid[25];
+char pss_wf[10];
 
 //static void processValueCmd(char *value, int cmd);
 static int validateCommand(const char *input,  ParsedCommand *parsed);
@@ -35,7 +36,8 @@ static char *proccessQuery(ParsedCommand *parsed);
 static char *proccessQueryWithValue(ParsedCommand *parsed);
 static char *processSVPT(const char *data);
 static char *proccessCLOP(const char *data);
-static char * resetDevice();
+static char * resetDevice(const char *value);
+static char * validatePassword(const char *password);
 
 static void serialConsole_task(void *arg) {
     uint8_t data[BUF_SIZE];
@@ -218,9 +220,66 @@ char *proccessAction(ParsedCommand *parsed) {
                 return "OFF";
              } else { return "ERR OFF"; }
         }
-        return "NA"; 
+        return "NA";
+        case DLBF:
+            if(atoi(parsed->value) > 0) {
+                if(spiffs_delete_block(atoi(parsed->value) )) {
+                   return "DELETE OK";
+                } else {
+                    return "NOT DELETED";
+                }
+            } else {return "NOT FOUND";} 
+        case PDWF:
+            char * response = validatePassword(parsed->value);
+
+            if (strncmp(response, "save", 4) == 0) {
+                nvs_save_str("password_wifi", parsed->value);
+                
+            } else if (strncmp(response, "Error", 5) == 0) {
+                return response;
+            }
+             return response;
+
+        case AEWF:
+            if(atoi(parsed->value) == 1 ) {
+                if (nvs_read_str("password_wifi", pss_wf, sizeof(pss_wf)) != NULL) {
+                    /////// Activa el wifi ///////
+                    if(wifi_manager_enable(atoi(parsed->value)) ){
+                        return "WIFI ON";
+                    } else { return "ERR WIFI"; } 
+                } else { return "PASS NO CONFIG"; }
+                
+            } else if(atoi(parsed->value) == 0 ) {
+                if(wifi_manager_enable(atoi(parsed->value)) ){
+                    return "WIFI OFF";
+                } else { return "ERR WIFI"; }
+            }
+            return "ERR";
+        case AEGP:
+          if (strcmp(parsed->value, "1") == 0) {
+            const char *value = "1";
+            char command[20];
+            snprintf(command, sizeof(command), "AT+CGPS=%s", value);
+            printf("Comando AT: %s\n", command);
+            if(sim7600_sendReadCommand(command)){
+                return "GPS ON";
+            } else {
+                return "GPS ON ERR";
+            }
+        } else if (strcmp(parsed->value, "0") == 0) {
+            const char *value = "0";
+            char command[20];
+            snprintf(command, sizeof(command), "AT+CGPS=%s", value);
+            printf("Comando AT: %s\n", command);
+            if(sim7600_sendReadCommand(command)){
+                return "GPS OFF";
+            } else {
+                return "GPS OFF ERR";
+            }
+        }
+            return "ERR";
         default:
-            return "NOT FOUND";
+            return "CMD ACTION NOT FOUND";
     }
 }
 char *proccessQuery(ParsedCommand *parsed) {
@@ -237,6 +296,10 @@ char *proccessQuery(ParsedCommand *parsed) {
         case SIID:
             if (nvs_read_str("sim_id", ccid, sizeof(ccid)) != NULL) {
                 return ccid;
+            }else { return "ERR"; }
+        case PWFR:
+            if (nvs_read_str("password_wifi", pss_wf, sizeof(pss_wf)) != NULL) {
+                return pss_wf;
             }else { return "ERR"; }
         case TKRP: 
             esp_event_loop_handle_t loop = get_event_loop();            
@@ -443,3 +506,33 @@ static char * resetDevice(const char *value) {
     else { return "ERR"; }
 }
 
+static char* validatePassword(const char *password) {
+
+    if (strlen(password) < 8) {
+        return "Error: Password must be at least 8 characters long";
+    }
+
+    bool has_number = false;
+    bool has_special = false;
+    const char *special_chars = "!#%&/(){}[]?¡*+-.";
+
+    for (size_t i = 0; i < strlen(password); ++i) {
+        if (isdigit((unsigned char)password[i])) {
+            has_number = true;
+        }
+        if (strchr(special_chars, password[i])) {
+            has_special = true;
+        }
+    }
+
+    if (!has_number) {
+        return "Error: Password must contain at least one number";
+    }
+
+    if (!has_special) {
+        return "Error: Password must contain at least one special character";
+    }
+
+    return "save successfully";
+    //linkzero234.
+}

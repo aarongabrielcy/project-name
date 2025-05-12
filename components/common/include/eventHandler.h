@@ -11,6 +11,8 @@ typedef enum {
     KEEP_ALIVE,
     TRACKING_RPT,
     SMS_DETECTED,
+    WIFI_CONNECTED,
+    WIFI_DISCONNECTED,
     DEFAULT
 } system_event_t;
 

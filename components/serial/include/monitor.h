@@ -39,6 +39,9 @@ typedef enum {
     CLRP = 17,
     RTDV = 18,
     OPCT = 19,
+    PDWF = 101,
+    AEWF = 102,
+    AEGP = 103 //ACTIVE GPS
   } cmd_action_t;
   
   typedef enum {
@@ -50,7 +53,8 @@ typedef enum {
     RTCT = 26,
     IGST = 27,
     SIID = 28,
-    OPST = 29
+    OPST = 29,
+    PWFR = 31
   } cmd_query_t;
 
   typedef enum {

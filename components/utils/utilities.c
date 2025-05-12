@@ -38,6 +38,8 @@ char* cleanATResponse(const char *input) {
     return cleaned;
 }
 /** modifica esta funcion para que no ponga comas ";" */
+/**ARREGLA ESTE ERROR DE "Fallo al reservar memoria en cleanResponse" Después de cierto tiempo  */
+
 char* cleanResponse(const char *response) {
     if (response == NULL) {
         ESP_LOGE(TAG, "cleanResponse recibió un puntero NULL");

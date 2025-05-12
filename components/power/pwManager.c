@@ -66,7 +66,7 @@ void power_press_key() {
     vTaskDelay(pdMS_TO_TICKS(1000));
     gpio_set_level(POWER_KEY_PIN, 1);
     vTaskDelay(pdMS_TO_TICKS(3000));
-    gpio_set_level(POWER_KEY_PIN, 0);
+    //gpio_set_level(POWER_KEY_PIN, 0);
 }
 void led_task(void *arg) {
     TickType_t lastWakeTime = xTaskGetTickCount();
