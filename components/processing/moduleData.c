@@ -150,7 +150,7 @@ void parseGSM(char *tokens) {
     serInf.mnc = atoi(values[2] + 4);
     strncpy(serInf.lac_tac, removeHexPrefix(values[3]), sizeof(serInf.lac_tac) - 1);
     strncpy(serInf.cell_id, values[4], sizeof(serInf.cell_id) - 1);
-    serInf.rxlvl_rsrp = atoi(values[6]);
+    serInf.rxlvl_rsrp = atoi(values[6]) /10;
 
     /*ESP_LOGI(TAG, "GSM Parseado: MCC:%d, MNC:%d, LAC:%s, CellID:%s, RXLVL:%d",
              serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);*/
@@ -209,7 +209,7 @@ void parseLTE(char *tokens) {
     strncpy(serInf.cell_id, values[4], sizeof(serInf.cell_id) - 1);
     serInf.cell_id[sizeof(serInf.cell_id) - 1] = '\0';
 
-    serInf.rxlvl_rsrp = atoi(values[11]);
+    serInf.rxlvl_rsrp = atoi(values[11]) /10;
     /*ESP_LOGI(TAG, "LTE Parseado: MCC:%d, MNC:%d, TAC:%s, CellID:%s, RSRP:%d",
              serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);*/
 }
@@ -233,7 +233,7 @@ void parseWCDMA(char *tokens) {
     serInf.mnc = atoi(values[2] + 4);
     strncpy(serInf.lac_tac, removeHexPrefix(values[3]), sizeof(serInf.lac_tac) - 1);
     strncpy(serInf.cell_id, values[4], sizeof(serInf.cell_id) - 1);
-    serInf.rxlvl_rsrp = atoi(values[12]);
+    serInf.rxlvl_rsrp = atoi(values[12] ) /10; 
 
     /*ESP_LOGI(TAG, "WCDMA Parseado: MCC:%d, MNC:%d, LAC:%s, CellID:%s, RXLVL:%d",
              serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);*/
@@ -256,7 +256,7 @@ void parseCDMA(char *tokens) {
 
     serInf.mcc = atoi(values[2]);
     serInf.mnc = atoi(values[2] + 4);
-    serInf.rxlvl_rsrp = atoi(values[6]);
+    serInf.rxlvl_rsrp = atoi(values[6]) /10;
 
     /*ESP_LOGI(TAG, "CDMA Parseado: MCC:%d, MNC:%d, RXLVL:%d",
              serInf.mcc, serInf.mnc, serInf.rxlvl_rsrp);*/
@@ -279,7 +279,7 @@ void parseEVDO(char *tokens) {
 
     serInf.mcc = atoi(values[2]);
     serInf.mnc = atoi(values[2] + 4);
-    serInf.rxlvl_rsrp = atoi(values[5]);
+    serInf.rxlvl_rsrp = atoi(values[5]) /10;
 
     /*ESP_LOGI(TAG, "EVDO Parseado: MCC:%d, MNC:%d, RXLVL:%d",
              serInf.mcc, serInf.mnc, serInf.rxlvl_rsrp);*/

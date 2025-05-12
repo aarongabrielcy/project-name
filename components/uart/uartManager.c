@@ -9,7 +9,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <string.h>
-#include "network.h"
 #include "utilities.h"
 #include "nvsManager.h"
 #include "eventHandler.h"
@@ -183,7 +182,9 @@ static void uart_task(void *arg) {
 
             } else if(strstr(response, "PB DONE") != NULL) {
                 ESP_LOGI(TAG, "REACTIVANDO TRAKER REPORT: %s", response);
-                sim7600_sendATCommand("AT+CGNSSINFO=30");
+                sim7600_sendATCommand("AT+CGPS=1");
+                vTaskDelay(pdMS_TO_TICKS(1000));
+                sim7600_sendATCommand("AT+CGNSSINFO=30");// VALIDA EL ESTADO DE LA IGNICION
             } else { ESP_LOGE(TAG, "RD URT: %s", response); }
         }
         vTaskDelay(pdMS_TO_TICKS(100));
@@ -232,6 +233,8 @@ bool uartManager_sendReadUart(const char *command) {
                 char *cleanSend = clean(cleanedResponse, command);
                 if (cleanSend != NULL) {
                     ESP_LOGE(TAG, "CIPSEND CLEAN=>%s", cleanSend);
+                    free(cleanSend);
+
                 } else if (cleanSend == NULL) {
                     ESP_LOGE(TAG, "clean() retornó NULL — cleanedResponse='%s', command='%s'", 
                              cleanedResponse ? cleanedResponse : "NULL",
@@ -355,6 +358,7 @@ bool uartManager_sendReadUart(const char *command) {
             //sim7600_sendATCommand("AT+CPIN?");
             return true;
         }
+    free(cleanedResponse);
     } else {
         ESP_LOGW(TAG, "Respuesta de comando No Procesado...");
         return false;
