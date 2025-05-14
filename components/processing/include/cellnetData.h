@@ -1,5 +1,5 @@
-#ifndef SERVICEINFO_H
-#define SERVICEINFO_H
+#ifndef CELLNETDATA_H
+#define CELLNETDATA_H
 
 #include <stdbool.h>  
 #include <stdint.h> 
@@ -12,8 +12,9 @@ typedef struct {
     char lac_tac[10];
     char cell_id[16];
     int rxlvl_rsrp;
-} serviceInfo_t;
+    char frequency_band[50];
+} cellnetData_t;
 
-extern serviceInfo_t serInf;
+extern cellnetData_t cpsi;
 
 #endif

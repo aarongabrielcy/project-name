@@ -212,11 +212,11 @@ char *proccessAction(ParsedCommand *parsed) {
             return resetDevice(parsed->value);
         case OPCT:
         if(atoi(parsed->value) == 1 ) {
-             if(outputControl(OUTPUT_1, atoi(parsed->value)) ) {
+             if(outputControl(OUTPUT1_PIN, atoi(parsed->value)) ) {
                 return "ON";
              } else { return "ERR ON"; }
         } else if(atoi(parsed->value) == 0) {
-            if(outputControl(OUTPUT_1, atoi(parsed->value)) ) {
+            if(outputControl(OUTPUT1_PIN, atoi(parsed->value)) ) {
                 return "OFF";
              } else { return "ERR OFF"; }
         }
@@ -278,6 +278,13 @@ char *proccessAction(ParsedCommand *parsed) {
             }
         }
             return "ERR";
+        if(atoi(parsed->value) >= 10 ) {
+                char command[50];
+                snprintf(command, sizeof(command), "AT+CGNSSINFO=%s", parsed->value);
+                printf("Comando AT: %s\n", command);
+            } else { return "ERR: The reporting time cannot be less than 10 seconds."; }
+            
+            return "OK";
         default:
             return "CMD ACTION NOT FOUND";
     }
@@ -428,9 +435,9 @@ char *proccessQueryWithValue(ParsedCommand *parsed) {
         case OPCT:
             if(atoi(value) == 1 ) {
                 printf("OUT1=%s",value);
-                outputControl(OUTPUT_1, atoi(value));
+                outputControl(OUTPUT1_PIN, atoi(value));
             } else if(atoi(value) == 0){
-                outputControl(OUTPUT_1, atoi(value));
+                outputControl(OUTPUT1_PIN, atoi(value));
             }
             break;
         case RTCT:

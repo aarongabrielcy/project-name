@@ -1,13 +1,14 @@
 #include "deviceManager.h"
 #include "nvsManager.h"
 #include "esp_log.h"
+#include "nvsData.h"
 
 void increment_reboot_counter(void) {
     const char* reboot_key = "dev_reboots";
 
     // Leer el valor actual
     int count = nvs_read_int(reboot_key);
-
+    nvs_data.rst_count = count;
     // Incrementar el contador
     count++;
 

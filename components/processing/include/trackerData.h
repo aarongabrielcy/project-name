@@ -9,16 +9,6 @@ typedef struct {
     int model;           // 99
     char sw_ver[8];      // "1.0.1"
     int msg_type;        // 1
-    char date[10];       // "00000000"
-    char utctime[10];       // "00:00:00"
-    double lat;        // "+00.000000"
-    char ns;
-    double lon;        // "+/-00.000000"
-    char ew;        
-    float speed;         // 0.00
-    float course;        // 0.00
-    int gps_svs;         // 0
-    int fix;             // 0
     int tkr_course;
     /*int in1_state;    // "00000100"
     int in_ig_st;

@@ -1,5 +1,5 @@
-#ifndef MODULEDATA_H
-#define MODULEDATA_H
+#ifndef PROCESSMANAGER_H
+#define PROCESSMANAGER_H
 
 #include <stdbool.h>
 

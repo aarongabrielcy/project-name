@@ -1,7 +1,7 @@
-#include "moduleData.h"
+#include "processManager.h"
 #include "trackerData.h"
-#include "additionalData.h"
-#include "serviceInfo.h"
+#include "gnssData.h"
+#include "cellnetData.h"
 #include "sim7600.h"
 #include "utilities.h"
 #include "esp_log.h"
@@ -24,7 +24,7 @@ void parseGPS(char *response) {
         printf("No hay fix GNSS. Asignando valores por defecto.\n");
         //aqui estoy asignando por defecto.
         tkr = (trackerData_t){};
-        add = (additionalData_t){};
+        gnss = (gnssData_t){};
         return;
     }
     // Parsear los datos si la respuesta no es vacía
@@ -44,63 +44,63 @@ void parseGPS(char *response) {
 
     static bool noChangeReported = true;
 
-    tkr.mode = atoi(tokens[0]);
-    tkr.gps_svs = atoi(tokens[1]);
-    add.glss_svs = atoi(tokens[2]);
-    add.beid_svs = atoi(tokens[3]);
-    tkr.lat = atof(tokens[4]);
-    tkr.ns = tokens[5][0];
-    tkr.lon = atof(tokens[6]);
-    tkr.ew = tokens[7][0];
-    strncpy(tkr.date, tokens[8], sizeof(tkr.date) - 1);
-    strncpy(tkr.utctime, tokens[9], sizeof(tkr.utctime) - 1);
-    add.alt = atof(tokens[10]);
-    tkr.speed = atof(tokens[11]) * 1.85;
+    gnss.mode = atoi(tokens[0]);
+    gnss.gps_svs = atoi(tokens[1]);
+    gnss.glss_svs = atoi(tokens[2]);
+    gnss.beid_svs = atoi(tokens[3]);
+    gnss.lat = atof(tokens[4]);
+    gnss.ns = tokens[5][0];
+    gnss.lon = atof(tokens[6]);
+    gnss.ew = tokens[7][0];
+    strncpy(gnss.date, tokens[8], sizeof(gnss.date) - 1);
+    strncpy(gnss.utctime, tokens[9], sizeof(gnss.utctime) - 1);
+    gnss.alt = atof(tokens[10]);
+    gnss.speed = atof(tokens[11]) * 1.85;
     // Manejo de course vacío
     if (index == 15) {  // No hay curso, ajustar los índices
-        tkr.course = 0.0;
-        add.pdop = atof(tokens[12]);  
-        add.hdop = atof(tokens[13]);  
-        add.vdop = atof(tokens[14]);  
+        gnss.course = 0.0;
+        gnss.pdop = atof(tokens[12]);  
+        gnss.hdop = atof(tokens[13]);  
+        gnss.vdop = atof(tokens[14]);  
     } else {  // Hay curso, índices normales
-        tkr.course = atof(tokens[12]);
-        add.pdop = atof(tokens[13]);
-        add.hdop = atof(tokens[14]);
-        add.vdop = atof(tokens[15]);
+        gnss.course = atof(tokens[12]);
+        gnss.pdop = atof(tokens[13]);
+        gnss.hdop = atof(tokens[14]);
+        gnss.vdop = atof(tokens[15]);
     }
-    tkr.fix = 1;
-    float difference = fabs(tkr.course - prevCourse);
+    gnss.fix = 1;
+    float difference = fabs(gnss.course - prevCourse);
     if (difference >= ANGLE_THRESHOLD) {
         printf("Cambio de rumbo detectado (%.2f°), activando reporte rápido.\n", difference);
         noChangeReported = false;
-        prevCourse = tkr.course; 
-        if(sim7600_sendReadCommand("AT+CGNSSINFO=3")){
+        prevCourse = gnss.course; 
+        if(sim7600_sendReadCommand("AT+CGNSSINFO=3")){ //volver dinamico
             tkr.tkr_course = 1;
-            printf("tiempo de reporte A 2 segundoS!");
+            printf("tiempo de reporte A 3 segundoS!");
         }
     } else if (!noChangeReported) {  
         printf("No hay cambio de curso.\n");
         noChangeReported = true;
-        if(sim7600_sendReadCommand("AT+CGNSSINFO=20")){
+        if(sim7600_sendReadCommand("AT+CGNSSINFO=30")) { //Volver dinamico
             tkr.tkr_course = 0;
-            printf("tiempo de reporte 20 segundo!");
+            printf("tiempo de reporte 30 segundo!");
         }
     }
     printf("\n--- Datos GNSS Parseados ---\n");
-    printf("Mode: %d\n", tkr.mode);
-    printf("GPS SVs: %d\n", tkr.gps_svs);
-    printf("GLONASS SVs: %d\n", add.glss_svs);
-    printf("Latitud: %.6f %c\n", tkr.lat, tkr.ns);
-    printf("Longitud: %.6f %c\n", tkr.lon, tkr.ew);
-    printf("Fecha: %s\n", tkr.date);
-    printf("Hora UTC: %s\n", tkr.utctime);
-    printf("Altitud: %.2f m\n", add.alt);
-    printf("Velocidad: %.2f km/h\n", tkr.speed);
-    printf("Curso: %.2f°\n", tkr.course);
-    printf("PDOP: %.2f\n", add.pdop);
-    printf("HDOP: %.2f\n", add.hdop);
-    printf("VDOP: %.2f\n", add.vdop);
-    printf("Fix: %d\n", tkr.fix);
+    printf("Mode: %d\n", gnss.mode);
+    printf("GPS SVs: %d\n", gnss.gps_svs);
+    printf("GLONASS SVs: %d\n", gnss.glss_svs);
+    printf("Latitud: %.6f %c\n", gnss.lat, gnss.ns);
+    printf("Longitud: %.6f %c\n", gnss.lon, gnss.ew);
+    printf("Fecha: %s\n", gnss.date);
+    printf("Hora UTC: %s\n", gnss.utctime);
+    printf("Altitud: %.2f m\n", gnss.alt);
+    printf("Velocidad: %.2f km/h\n", gnss.speed);
+    printf("Curso: %.2f°\n", gnss.course);
+    printf("PDOP: %.2f\n", gnss.pdop);
+    printf("HDOP: %.2f\n", gnss.hdop);
+    printf("VDOP: %.2f\n", gnss.vdop);
+    printf("Fix: %d\n", gnss.fix);
     printf("---------------------------\n");
 }
 bool parsePSI(char *response) {
@@ -145,15 +145,15 @@ void parseGSM(char *tokens) {
         ESP_LOGE(TAG, "Error: Datos insuficientes en GSM.");
         return;
     }
-    strncpy(serInf.sys_mode, values[0], sizeof(serInf.sys_mode) - 1);
-    serInf.mcc = atoi(values[2]);
-    serInf.mnc = atoi(values[2] + 4);
-    strncpy(serInf.lac_tac, removeHexPrefix(values[3]), sizeof(serInf.lac_tac) - 1);
-    strncpy(serInf.cell_id, values[4], sizeof(serInf.cell_id) - 1);
-    serInf.rxlvl_rsrp = atoi(values[6]) /10;
+    strncpy(cpsi.sys_mode, values[0], sizeof(cpsi.sys_mode) - 1);
+    cpsi.mcc = atoi(values[2]);
+    cpsi.mnc = atoi(values[2] + 4);
+    strncpy(cpsi.lac_tac, removeHexPrefix(values[3]), sizeof(cpsi.lac_tac) - 1);
+    strncpy(cpsi.cell_id, values[4], sizeof(cpsi.cell_id) - 1);
+    cpsi.rxlvl_rsrp = atoi(values[6]) /10;
 
     /*ESP_LOGI(TAG, "GSM Parseado: MCC:%d, MNC:%d, LAC:%s, CellID:%s, RXLVL:%d",
-             serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);*/
+             cpsi.mcc, cpsi.mnc, cpsi.lac_tac, cpsi.cell_id, cpsi.rxlvl_rsrp);*/
 }
 /*void parseLTE(char *tokens) {
     char *values[15] = {NULL};  
@@ -169,13 +169,13 @@ void parseGSM(char *tokens) {
         ESP_LOGE(TAG, "Error: Datos insuficientes en LTE.");
         return;
     }
-    strncpy(serInf.sys_mode, values[0], sizeof(serInf.sys_mode) - 1);
-    strncpy(serInf.oper_mode, values[1], sizeof(serInf.sys_mode) - 1);
-    serInf.mcc = atoi(values[2]);
-    serInf.mnc = atoi(values[2] + 4);
-    strncpy(serInf.lac_tac, removeHexPrefix(values[3]), sizeof(serInf.lac_tac) - 1);
-    strncpy(serInf.cell_id, values[4], sizeof(serInf.cell_id) - 1);
-    serInf.rxlvl_rsrp = atoi(values[11]);
+    strncpy(cpsi.sys_mode, values[0], sizeof(cpsi.sys_mode) - 1);
+    strncpy(cpsi.oper_mode, values[1], sizeof(cpsi.sys_mode) - 1);
+    cpsi.mcc = atoi(values[2]);
+    cpsi.mnc = atoi(values[2] + 4);
+    strncpy(cpsi.lac_tac, removeHexPrefix(values[3]), sizeof(cpsi.lac_tac) - 1);
+    strncpy(cpsi.cell_id, values[4], sizeof(cpsi.cell_id) - 1);
+    cpsi.rxlvl_rsrp = atoi(values[11]);
 }*/
 void parseLTE(char *tokens) {
     char *values[15] = {NULL};  
@@ -193,25 +193,25 @@ void parseLTE(char *tokens) {
         return;
     }
 
-    strncpy(serInf.sys_mode, values[0], sizeof(serInf.sys_mode) - 1);
-    serInf.sys_mode[sizeof(serInf.sys_mode) - 1] = '\0';
+    strncpy(cpsi.sys_mode, values[0], sizeof(cpsi.sys_mode) - 1);
+    cpsi.sys_mode[sizeof(cpsi.sys_mode) - 1] = '\0';
 
-    strncpy(serInf.oper_mode, values[1], sizeof(serInf.oper_mode) - 1);
-    serInf.oper_mode[sizeof(serInf.oper_mode) - 1] = '\0';
+    strncpy(cpsi.oper_mode, values[1], sizeof(cpsi.oper_mode) - 1);
+    cpsi.oper_mode[sizeof(cpsi.oper_mode) - 1] = '\0';
 
-    serInf.mcc = atoi(values[2]);
-    serInf.mnc = atoi(values[2] + 4); // Según tu formato MCC-MNC, sigues leyendo bien
+    cpsi.mcc = atoi(values[2]);
+    cpsi.mnc = atoi(values[2] + 4); // Según tu formato MCC-MNC, sigues leyendo bien
 
     const char *lac_tac_clean = removeHexPrefix(values[3]);
-    strncpy(serInf.lac_tac, lac_tac_clean, sizeof(serInf.lac_tac) - 1);
-    serInf.lac_tac[sizeof(serInf.lac_tac) - 1] = '\0';
+    strncpy(cpsi.lac_tac, lac_tac_clean, sizeof(cpsi.lac_tac) - 1);
+    cpsi.lac_tac[sizeof(cpsi.lac_tac) - 1] = '\0';
 
-    strncpy(serInf.cell_id, values[4], sizeof(serInf.cell_id) - 1);
-    serInf.cell_id[sizeof(serInf.cell_id) - 1] = '\0';
+    strncpy(cpsi.cell_id, values[4], sizeof(cpsi.cell_id) - 1);
+    cpsi.cell_id[sizeof(cpsi.cell_id) - 1] = '\0';
 
-    serInf.rxlvl_rsrp = atoi(values[11]) /10;
+    cpsi.rxlvl_rsrp = atoi(values[11]) /10;
     /*ESP_LOGI(TAG, "LTE Parseado: MCC:%d, MNC:%d, TAC:%s, CellID:%s, RSRP:%d",
-             serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);*/
+             cpsi.mcc, cpsi.mnc, cpsi.lac_tac, cpsi.cell_id, cpsi.rxlvl_rsrp);*/
 }
 
 void parseWCDMA(char *tokens) {
@@ -229,14 +229,14 @@ void parseWCDMA(char *tokens) {
         return;
     }
 
-    serInf.mcc = atoi(values[2]);
-    serInf.mnc = atoi(values[2] + 4);
-    strncpy(serInf.lac_tac, removeHexPrefix(values[3]), sizeof(serInf.lac_tac) - 1);
-    strncpy(serInf.cell_id, values[4], sizeof(serInf.cell_id) - 1);
-    serInf.rxlvl_rsrp = atoi(values[12] ) /10; 
+    cpsi.mcc = atoi(values[2]);
+    cpsi.mnc = atoi(values[2] + 4);
+    strncpy(cpsi.lac_tac, removeHexPrefix(values[3]), sizeof(cpsi.lac_tac) - 1);
+    strncpy(cpsi.cell_id, values[4], sizeof(cpsi.cell_id) - 1);
+    cpsi.rxlvl_rsrp = atoi(values[12] ) /10; 
 
     /*ESP_LOGI(TAG, "WCDMA Parseado: MCC:%d, MNC:%d, LAC:%s, CellID:%s, RXLVL:%d",
-             serInf.mcc, serInf.mnc, serInf.lac_tac, serInf.cell_id, serInf.rxlvl_rsrp);*/
+             cpsi.mcc, cpsi.mnc, cpsi.lac_tac, cpsi.cell_id, cpsi.rxlvl_rsrp);*/
 }
 
 void parseCDMA(char *tokens) {
@@ -254,12 +254,12 @@ void parseCDMA(char *tokens) {
         return;
     }
 
-    serInf.mcc = atoi(values[2]);
-    serInf.mnc = atoi(values[2] + 4);
-    serInf.rxlvl_rsrp = atoi(values[6]) /10;
+    cpsi.mcc = atoi(values[2]);
+    cpsi.mnc = atoi(values[2] + 4);
+    cpsi.rxlvl_rsrp = atoi(values[6]) /10;
 
     /*ESP_LOGI(TAG, "CDMA Parseado: MCC:%d, MNC:%d, RXLVL:%d",
-             serInf.mcc, serInf.mnc, serInf.rxlvl_rsrp);*/
+             cpsi.mcc, cpsi.mnc, cpsi.rxlvl_rsrp);*/
 }
 
 void parseEVDO(char *tokens) {
@@ -277,10 +277,10 @@ void parseEVDO(char *tokens) {
         return;
     }
 
-    serInf.mcc = atoi(values[2]);
-    serInf.mnc = atoi(values[2] + 4);
-    serInf.rxlvl_rsrp = atoi(values[5]) /10;
+    cpsi.mcc = atoi(values[2]);
+    cpsi.mnc = atoi(values[2] + 4);
+    cpsi.rxlvl_rsrp = atoi(values[5]) /10;
 
     /*ESP_LOGI(TAG, "EVDO Parseado: MCC:%d, MNC:%d, RXLVL:%d",
-             serInf.mcc, serInf.mnc, serInf.rxlvl_rsrp);*/
+             cpsi.mcc, cpsi.mnc, cpsi.rxlvl_rsrp);*/
 }

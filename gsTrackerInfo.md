@@ -24,12 +24,11 @@
 - `SAIO` → Estado Y Activación de inpus/outputs
 - `DBMD` → Modo debug
 - `RTCT` → Numero de reinicios del dispositivo.
-- `CLDT` → Cellular data
+- `CLDT` → Cellular data (CPSI -> Cellular Protocol System Information)
 - `CLRP` → Cellular report 
 - `OPCT` → Output control
 - `OPST` → Output state
 - `RTDV` → Reinicio del dispositivo completo
-
 
 # Datos guardados en NVS memoria no volatil
 - `dev_imei` → imei del modulo SIM → AT command
@@ -44,6 +43,8 @@
 - `trackings_sent` → numero de mensajes enviados desde encendido
 - `debug_mode` → estado del modo debug
 - `pass_reset` → contraseña para reiniciar el dispositivo
+- `auth_phone` → telefono autorizado para mandar SMS (MAX 2)
+
 # Errores GSTracker generados
 - `0` → error sending data to the server
 

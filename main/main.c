@@ -16,7 +16,7 @@ void app_main(void) {
     uart_init();
     uartManager_start();
     serialConsole_init();
-    io_manager_init();
+    //io_manager_init();
     start_uart_task();
     seco_init();
     out2_init();
