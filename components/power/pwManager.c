@@ -13,12 +13,17 @@
 static int ledState = 0;
 static int fixState = 0;
 static bool ignition_state = false;
+
+static void power_init_gnss_led();
+//static void io_manager_init();
+
 void power_init() {
     ESP_LOGI(TAG, "Inicializando Power Manager...");
     power_on_module();
     power_press_key();
     power_init_gnss_led();
-    power_init_ignition();
+    //power_init_ignition();
+    //io_manager_init();
 }
 // Encender el módulo SIM
 void power_on_module() {
@@ -79,7 +84,7 @@ void led_task(void *arg) {
     }
 }
 // Configurar el LED GNSS
-void power_init_gnss_led() {
+static void power_init_gnss_led() {
     gpio_reset_pin(GNSS_LED_PIN);
     ESP_LOGI(TAG, "Inicializando LED GNSS en PIN=%d", GNSS_LED_PIN);
 
@@ -95,7 +100,7 @@ void power_init_gnss_led() {
     xTaskCreatePinnedToCore(led_task, "led_task", 2048, NULL, 2, NULL, tskNO_AFFINITY);
 }
 // Inicializar el pin de ignición
-void power_init_ignition() {
+/*void power_init_ignition() {
     gpio_reset_pin(IGNITION_PIN);
     ESP_LOGI(TAG, "Inicializando IGNITION en PIN=%d", IGNITION_PIN);
 
@@ -107,45 +112,68 @@ void power_init_ignition() {
     io_conf.intr_type = GPIO_INTR_DISABLE;
 
     gpio_config(&io_conf);
-}
-void io_monitor_task(void *arg) {
-    bool last_state = gpio_get_level(IGNITION_PIN);  // Estado inicial
-    ignition_state = last_state;  // Guardar estado inicial
-    ESP_LOGI(TAG, "Leyendo estado de entrada ignition:%s", ignition_state ? "OFF" : "ON");
-    vTaskDelay(pdMS_TO_TICKS(50)); 
-    esp_event_loop_handle_t loop = get_event_loop();
-    
-    if (loop) {
-        esp_err_t err = esp_event_post_to(loop, SYSTEM_EVENTS, 
-                                          ignition_state ? IGNITION_OFF : IGNITION_ON, 
-                                          NULL, 0, portMAX_DELAY);
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "Error enviando evento inicial: %s", esp_err_to_name(err));
-        }
-    }
-    while (1) {
-        bool current_state = gpio_get_level(IGNITION_PIN);
-        if (current_state != last_state) {  // Detectar cambio de estado
-            ignition_state = current_state; // Guardar nuevo estado
-            ESP_LOGI(TAG, "Ignition %s", !current_state ? "ON" : "OFF"); /// si es false (LOW/0V) es encendido y true (HIGH/3.3V o 5V) es apagado Por la configuración PULL UP
-            // Obtener el event loop
-            esp_event_loop_handle_t loop = get_event_loop();
+}*/
+static void io_monitor_task(void *arg) {
+    bool last_ignition = gpio_get_level(IGNITION_PIN);
+    bool last_input1 = gpio_get_level(INPUT1_PIN);
+    bool last_input2 = gpio_get_level(INPUT2_PIN);
 
+    ignition_state = last_ignition;
+    ESP_LOGI(TAG, "Ignition inicial: %s", last_ignition ? "OFF" : "ON");
+    ESP_LOGI(TAG, "Input1 inicial: %s", last_input1 ? "OFF" : "ON");
+    ESP_LOGI(TAG, "Input2 inicial: %s", last_input2 ? "OFF" : "ON");
+
+    esp_event_loop_handle_t loop = get_event_loop();
+
+    if (loop) {
+        esp_event_post_to(loop, SYSTEM_EVENTS, last_ignition ? IGNITION_OFF : IGNITION_ON, NULL, 0, portMAX_DELAY);
+        esp_event_post_to(loop, SYSTEM_EVENTS, last_input1 ? INPUT1_OFF : INPUT1_ON, NULL, 0, portMAX_DELAY);
+        esp_event_post_to(loop, SYSTEM_EVENTS, last_input2 ? INPUT2_OFF : INPUT2_ON, NULL, 0, portMAX_DELAY);
+    }
+
+    while (1) {
+        bool current_ignition = gpio_get_level(IGNITION_PIN);
+        bool current_input1 = gpio_get_level(INPUT1_PIN);
+        bool current_input2 = gpio_get_level(INPUT2_PIN);
+
+        if (current_ignition != last_ignition) {
+            ignition_state = current_ignition;
+            ESP_LOGI(TAG, "Ignition %s", current_ignition ? "OFF" : "ON");
             if (loop) {
-                esp_err_t err = esp_event_post_to(loop, SYSTEM_EVENTS, 
-                                                  ignition_state ? IGNITION_OFF : IGNITION_ON, 
-                                                  NULL, 0, portMAX_DELAY);
-                if (err != ESP_OK) {
-                    ESP_LOGE(TAG, "Error enviando evento: %s", esp_err_to_name(err));
-                }
+                esp_event_post_to(loop, SYSTEM_EVENTS, current_ignition ? IGNITION_OFF : IGNITION_ON, NULL, 0, portMAX_DELAY);
             }
+            last_ignition = current_ignition;
         }
-        last_state = current_state;
-        vTaskDelay(pdMS_TO_TICKS(50));  // Pequeño retraso para evitar falsos positivos
+
+        if (current_input1 != last_input1) {
+            ESP_LOGI(TAG, "Input1 %s", current_input1 ? "OFF" : "ON");
+            if (loop) {
+                esp_event_post_to(loop, SYSTEM_EVENTS, current_input1 ? INPUT1_OFF : INPUT1_ON, NULL, 0, portMAX_DELAY);
+            }
+            last_input1 = current_input1;
+        }
+
+        if (current_input2 != last_input2) {
+            ESP_LOGI(TAG, "Input2 %s", current_input2 ? "OFF" : "ON");
+            if (loop) {
+                esp_event_post_to(loop, SYSTEM_EVENTS, current_input2 ? INPUT2_OFF : INPUT2_ON, NULL, 0, portMAX_DELAY);
+            }
+            last_input2 = current_input2;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 void io_manager_init() {
-    gpio_set_direction(IGNITION_PIN, GPIO_MODE_INPUT);
+     gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << IGNITION_PIN) | (1ULL << INPUT1_PIN) | (1ULL << INPUT2_PIN),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    gpio_config(&io_conf);
+
     xTaskCreate(io_monitor_task, "io_monitor_task", 4096, NULL, 5, NULL);
 }
 bool power_get_ignition_state() {
@@ -157,7 +185,7 @@ void set_gnss_led_state(int state) {
 }
 void seco_init(void) {
     gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << OUTPUT_1),
+        .pin_bit_mask = (1ULL << OUTPUT1_PIN),
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -167,7 +195,7 @@ void seco_init(void) {
 }
 void out2_init(void) {
     gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << OUTPUT_2),
+        .pin_bit_mask = (1ULL << OUTPUT2_PIN),
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -176,21 +204,21 @@ void out2_init(void) {
     gpio_config(&io_conf);
 }
 void engineCutOn(void) {
-    gpio_set_level(OUTPUT_1, 1);
+    gpio_set_level(OUTPUT1_PIN, 1);
     vTaskDelay(pdMS_TO_TICKS(1000));
 }
 
 void engineCutOff(void) {
-    gpio_set_level(OUTPUT_1, 0);
+    gpio_set_level(OUTPUT1_PIN, 0);
     vTaskDelay(pdMS_TO_TICKS(1000));
 }
 /////// volver dinamicos la activación
 void active_out2(void) {
-    gpio_set_level(OUTPUT_2, 1);
+    gpio_set_level(OUTPUT2_PIN, 1);
     vTaskDelay(pdMS_TO_TICKS(1000));
 }
 void desactive_out2(void) {
-    gpio_set_level(OUTPUT_2, 0);
+    gpio_set_level(OUTPUT2_PIN, 0);
     vTaskDelay(pdMS_TO_TICKS(1000));
 }
 /////////// eliminar las funciones de arriba //////////
@@ -208,5 +236,17 @@ int outputState(int output) {
     int level = gpio_get_level(output);
     ESP_LOGI(TAG, "OUT STATE:%d", level);
     return level ? 1 : 0;
+}
+
+void init_inputs(void) {
+    // Configurar ambos pines como entrada
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << INPUT1_PIN) | (1ULL << INPUT2_PIN),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,  // ya tienes resistencias pull-up externas
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    gpio_config(&io_conf);
 }
 

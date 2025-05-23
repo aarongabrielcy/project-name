@@ -34,15 +34,11 @@ void sim7600_basic_config() {
     sim7600_init("AT+CICCID");
     vTaskDelay(pdMS_TO_TICKS(1000));
     sim7600_init("AT+CGPS=1");
-    sim7600_init("AT+CPSI=28");
+    sim7600_init("AT+CPSI=32");
     sim7600_init("AT+NETOPEN");
     sim7600_init("AT+CIPOPEN=0,\"TCP\",\"34.196.135.179\",5200");
     ESP_LOGI(TAG, "Ignition State: %d", ign_st);
-    if (ign_st) {
-        sim7600_init("AT+CGNSSINFO=30");
-    } else {
-        sim7600_init("AT+CGNSSINFO=255");
-    }
+    sim7600_init("AT+CGNSSINFO=30");
     //sim7600_init("ATE0"); //NO REPLICA LOS COMANDOS ENVIADOS EN LAS RESPUESTAS "0"
 }
 void sim7600_reconnect_tcp_server() {
@@ -57,7 +53,7 @@ void sim7600_reconnect_tcp_service() {
     sim7600_sendATCommand("AT+CIPOPEN=0,\"TCP\",\"34.196.135.179\",5200");   
 }
 void sim7600_sendATCommand(const char *command) {
-    ESP_LOGI(TAG, "Enviando comando: %s", command);
+    ESP_LOGI(TAG, "send AT CMD: %s", command);
     uartManager_sendCommand(command);
 }
 

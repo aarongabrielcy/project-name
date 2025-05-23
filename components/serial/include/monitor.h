@@ -54,7 +54,8 @@ typedef enum {
     IGST = 27,
     SIID = 28,
     OPST = 29,
-    PWFR = 31
+    PWFR = 31,
+    LVPO = 32
   } cmd_query_t;
 
   typedef enum {

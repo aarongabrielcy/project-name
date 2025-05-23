@@ -4,6 +4,8 @@
 #include "freertos/task.h"
 #include "lwip/sockets.h"
 #include "string.h"
+#include "gnssData.h"
+#include "nvsData.h"
 
 #define PORT 3333
 static const char *TAG = "TCP_SERVER";
@@ -12,7 +14,8 @@ static TaskHandle_t tcp_server_handle = NULL;
 
 static volatile bool tcp_server_running = true;
 
-const char *data_to_send = "STT;2049830928;3FFFFF;95;1.0.21;1;20250506;17:13:19;79554408;334;20;3C2F;-1119;+21.023028;-89.584338;0.00;0.00;4;1;00000001;00000000;1;1;0929;4.1;14.19";
+//const char *data_to_send = "STT;2049830928;3FFFFF;95;1.0.21;1;20250506;17:13:19;79554408;334;20;3C2F;-1119;+21.023028;-89.584338;0.00;0.00;4;1;00000001;00000000;1;1;0929;4.1;14.19";
+char data_to_send[256];
 
 static void tcp_server_task(void *pvParameters) {
     int sockfd, client_sock;
@@ -43,10 +46,10 @@ static void tcp_server_task(void *pvParameters) {
         close(sockfd);
         vTaskDelete(NULL);
     }
-
     ESP_LOGI(TAG, "Esperando cliente TCP...");
 
     while (tcp_server_running) {
+        
         client_sock = accept(sockfd, (struct sockaddr *)&client_addr, &addr_len);
         if (client_sock < 0) {
             if (tcp_server_running) ESP_LOGE(TAG, "Error en accept");
@@ -54,15 +57,16 @@ static void tcp_server_task(void *pvParameters) {
         }
 
         ESP_LOGI(TAG, "Cliente TCP conectado");
-
+        // EMITIR AQUI EL EVENTO DE CLIENTE TCP CONECTADO    
         while (tcp_server_running) {
+            snprintf(data_to_send, sizeof(data_to_send), "%s,%s,%d,%s,%s,%d", nvs_data.device_id,nvs_data.sim_iccid, nvs_data.rst_count, gnss.date, gnss.utctime, gnss.fix);
             int sent = send(client_sock, data_to_send, strlen(data_to_send), 0);
             if (sent < 0) {
                 ESP_LOGE(TAG, "Error enviando datos");
                 break;
             }
 
-            ESP_LOGI(TAG, "Datos enviados");
+            ESP_LOGI(TAG, "Datos enviados: %s", data_to_send);
             vTaskDelay(pdMS_TO_TICKS(30000));  // 30 segundos
         }
 

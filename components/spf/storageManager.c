@@ -9,7 +9,7 @@
 
 #define TAG "storageManager"
 
-#define MAX_BLOCK_SIZE 2048
+#define MAX_BLOCK_SIZE 1498
 #define BASE_PATH "/spiffs"
 static int currentBlockNumber = 1;
 #define MAX_BLOCK_FILES 100 // Límite de archivos esperados

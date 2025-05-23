@@ -24,11 +24,15 @@ typedef struct {
     int number;
     char symbol;
     char value[64];  // Arreglo para almacenar el valor
+
 } ParsedCommand;
 char id[20];
 char ccid[25];
 char pss_wf[10];
 
+char location[100];
+char lat[20] = "+0.000000";
+char lon[20] = "+0.000000";
 //static void processValueCmd(char *value, int cmd);
 static int validateCommand(const char *input,  ParsedCommand *parsed);
 static char *proccessAction(ParsedCommand *parsed);
@@ -212,11 +216,11 @@ char *proccessAction(ParsedCommand *parsed) {
             return resetDevice(parsed->value);
         case OPCT:
         if(atoi(parsed->value) == 1 ) {
-             if(outputControl(OUTPUT_1, atoi(parsed->value)) ) {
+             if(outputControl(OUTPUT1_PIN, atoi(parsed->value)) ) {
                 return "ON";
              } else { return "ERR ON"; }
         } else if(atoi(parsed->value) == 0) {
-            if(outputControl(OUTPUT_1, atoi(parsed->value)) ) {
+            if(outputControl(OUTPUT1_PIN, atoi(parsed->value)) ) {
                 return "OFF";
              } else { return "ERR OFF"; }
         }
@@ -278,6 +282,13 @@ char *proccessAction(ParsedCommand *parsed) {
             }
         }
             return "ERR";
+        if(atoi(parsed->value) >= 10 ) {
+                char command[50];
+                snprintf(command, sizeof(command), "AT+CGNSSINFO=%s", parsed->value);
+                printf("Comando AT: %s\n", command);
+            } else { return "ERR: The reporting time cannot be less than 10 seconds."; }
+            
+            return "OK";
         default:
             return "CMD ACTION NOT FOUND";
     }
@@ -313,6 +324,15 @@ char *proccessQuery(ParsedCommand *parsed) {
             } else {
                 return "ERR";  // El event loop no está disponible
             }
+        case LVPO:
+            if(nvs_read_str("last_valid_lon", lon, sizeof(lon)) != NULL) {
+                ESP_LOGI(TAG, "last_lat_NVS=%s", lon);   
+            } else { return "ERR LON"; }
+            if(nvs_read_str("last_valid_lat", lat, sizeof(lat)) != NULL) {
+                ESP_LOGI(TAG, "last_lat_NVS=%s", lat);   
+            } else { return "ERR LAT"; }
+            snprintf(location, sizeof(location), "https://www.google.com/maps/search/?api=1&query=%s,%s&zoom=20", lat, lon);
+        return location;
         default:
             return "NOT FOUND";
     }
@@ -428,9 +448,9 @@ char *proccessQueryWithValue(ParsedCommand *parsed) {
         case OPCT:
             if(atoi(value) == 1 ) {
                 printf("OUT1=%s",value);
-                outputControl(OUTPUT_1, atoi(value));
+                outputControl(OUTPUT1_PIN, atoi(value));
             } else if(atoi(value) == 0){
-                outputControl(OUTPUT_1, atoi(value));
+                outputControl(OUTPUT1_PIN, atoi(value));
             }
             break;
         case RTCT:

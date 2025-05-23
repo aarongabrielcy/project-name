@@ -24,19 +24,19 @@
 - `SAIO` → Estado Y Activación de inpus/outputs
 - `DBMD` → Modo debug
 - `RTCT` → Numero de reinicios del dispositivo.
-- `CLDT` → Cellular data
+- `CLDT` → Cellular data (CPSI -> Cellular Protocol System Information)
 - `CLRP` → Cellular report 
 - `OPCT` → Output control
 - `OPST` → Output state
 - `RTDV` → Reinicio del dispositivo completo
-
+- `LVPO` → última posición valida
 
 # Datos guardados en NVS memoria no volatil
 - `dev_imei` → imei del modulo SIM → AT command
 - `dev_id` → id del dispositivo → AT command
 - `sim_id` → operador celular (validar al reiniciar) → AT command
 - `Keep_a_live` → tiempo de reporte de latido → UART/http/TCP/SMS
-- `Time_report_tkg` → tiempo de reporte de trackeo 
+- `time_report_tkg` → tiempo de reporte de trackeo 
 - `dev_password` → contraseña para ingresar a modificar parametros
 - `life_time` → tiempo de vida encendido el dispositivo
 - `dev_reboots` → Reinicios del dispositivo
@@ -44,6 +44,10 @@
 - `trackings_sent` → numero de mensajes enviados desde encendido
 - `debug_mode` → estado del modo debug
 - `pass_reset` → contraseña para reiniciar el dispositivo
+- `auth_phone` → telefono autorizado para mandar SMS (MAX 2)
+- `last_valid_lat` → ultima latitude valida
+- `last_valid_lon` → ultima longitude valida
+
 # Errores GSTracker generados
 - `0` → error sending data to the server
 

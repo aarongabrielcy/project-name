@@ -1,8 +1,8 @@
-#include "serviceInfo.h"
+#include "cellnetData.h"
 #include <string.h>
 
 // Inicializar los valores por defecto
-serviceInfo_t serInf = {
+cellnetData_t cpsi = {
     .sys_mode = "na",
     .oper_mode = "na",
     .mcc = 0,
@@ -10,4 +10,5 @@ serviceInfo_t serInf = {
     .lac_tac = "FFFF",
     .cell_id = "00000000",
     .rxlvl_rsrp = 999,
+    .frequency_band = "NO BAND"
 };
