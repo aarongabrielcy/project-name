@@ -25,7 +25,7 @@ void power_blink_gnss_led(int fixState);
 //void power_init_ignition();
 bool power_get_ignition_state();
 void set_gnss_led_state(int state);
-//void io_manager_init();
+void io_manager_init();
 //void io_monitor_task(void *arg);
 void seco_init(void);
 void out2_init(void);

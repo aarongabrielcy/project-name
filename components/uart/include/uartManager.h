@@ -24,5 +24,5 @@ int uartManager_readEvent(char *buffer, int max_length);
 void uartManager_sendCommand(const char *command);
 bool uartManager_sendReadUart(const char *command);
 int sendToServer(char *message);
-void start_uart_task(void);
+void start_event_handler_uart(void);
 #endif

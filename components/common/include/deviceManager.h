@@ -1,3 +1,3 @@
 #pragma once
 
-void increment_reboot_counter(void);
+void device_init(void);

@@ -83,7 +83,7 @@ char* formatCoordinates(double coord, char direction) {
 
     // Formatear el número como cadena con signo explícito
     snprintf(buffer, sizeof(buffer), "%+.6f", decimalDegrees);
-
+  
     return buffer; // Retornar el puntero al buffer estático
 }
 

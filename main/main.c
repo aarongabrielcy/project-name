@@ -16,10 +16,10 @@ void app_main(void) {
     uart_init();
     uartManager_start();
     serialConsole_init();
-    //io_manager_init();
-    start_uart_task();
+    start_event_handler_uart();
     seco_init();
     out2_init();
-    increment_reboot_counter(); 
+    io_manager_init();
+    device_init();
     //esp_log_level_set("uartManager", ESP_LOG_NONE);  // Desactiva logs de "uartManager"
 }

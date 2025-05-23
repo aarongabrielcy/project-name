@@ -3,11 +3,12 @@
 
 #include <stdbool.h>
 
-#define ANGLE_THRESHOLD 15.0  // Umbral de cambio de ángulo
+#define ANGLE_THRESHOLD 30.0  // Umbral de cambio de ángulo
+#define TRACKING_SPEED 100.0
 //extern bool reportFastMode;
 //extern int timeReport = 30;
 
-void parseGPS(char *response);
+bool parseGPS(char *response);
 //void updateReportRate(int seconds);
 bool parsePSI(char *response);
 void parseGSM(char *tokens);

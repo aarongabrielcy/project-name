@@ -24,11 +24,15 @@ typedef struct {
     int number;
     char symbol;
     char value[64];  // Arreglo para almacenar el valor
+
 } ParsedCommand;
 char id[20];
 char ccid[25];
 char pss_wf[10];
 
+char location[100];
+char lat[20] = "+0.000000";
+char lon[20] = "+0.000000";
 //static void processValueCmd(char *value, int cmd);
 static int validateCommand(const char *input,  ParsedCommand *parsed);
 static char *proccessAction(ParsedCommand *parsed);
@@ -320,6 +324,15 @@ char *proccessQuery(ParsedCommand *parsed) {
             } else {
                 return "ERR";  // El event loop no está disponible
             }
+        case LVPO:
+            if(nvs_read_str("last_valid_lon", lon, sizeof(lon)) != NULL) {
+                ESP_LOGI(TAG, "last_lat_NVS=%s", lon);   
+            } else { return "ERR LON"; }
+            if(nvs_read_str("last_valid_lat", lat, sizeof(lat)) != NULL) {
+                ESP_LOGI(TAG, "last_lat_NVS=%s", lat);   
+            } else { return "ERR LAT"; }
+            snprintf(location, sizeof(location), "https://www.google.com/maps/search/?api=1&query=%s,%s&zoom=20", lat, lon);
+        return location;
         default:
             return "NOT FOUND";
     }

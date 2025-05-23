@@ -15,7 +15,7 @@ static int fixState = 0;
 static bool ignition_state = false;
 
 static void power_init_gnss_led();
-static void io_manager_init();
+//static void io_manager_init();
 
 void power_init() {
     ESP_LOGI(TAG, "Inicializando Power Manager...");
@@ -23,7 +23,7 @@ void power_init() {
     power_press_key();
     power_init_gnss_led();
     //power_init_ignition();
-    io_manager_init();
+    //io_manager_init();
 }
 // Encender el módulo SIM
 void power_on_module() {
@@ -164,7 +164,7 @@ static void io_monitor_task(void *arg) {
         vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
-static void io_manager_init() {
+void io_manager_init() {
      gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << IGNITION_PIN) | (1ULL << INPUT1_PIN) | (1ULL << INPUT2_PIN),
         .mode = GPIO_MODE_INPUT,
