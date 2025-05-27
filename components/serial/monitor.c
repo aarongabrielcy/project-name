@@ -212,7 +212,7 @@ char *proccessAction(ParsedCommand *parsed) {
             return processSVPT(parsed->value);
         case CLOP:
             return proccessCLOP(parsed->value);
-        case RTDV:
+        case MRST:
             return resetDevice(parsed->value);
         case OPCT:
         if(atoi(parsed->value) == 1 ) {
@@ -324,7 +324,7 @@ char *proccessQuery(ParsedCommand *parsed) {
             } else {
                 return "ERR";  // El event loop no está disponible
             }
-        case LVPO:
+        case LOCA:
             if(nvs_read_str("last_valid_lon", lon, sizeof(lon)) != NULL) {
                 ESP_LOGI(TAG, "last_lat_NVS=%s", lon);   
             } else { return "ERR LON"; }
@@ -379,7 +379,7 @@ char *proccessQueryWithValue(ParsedCommand *parsed) {
                 sim7600_sendATCommand("AT+CGNSSINFO"); 
             }
             break;
-        case TMRP:
+        case TMTR:
             if(atoi(value) >= 5 ) {
                 char command[50];
                 snprintf(command, sizeof(command), "AT+CGNSSINFO=%s", value);

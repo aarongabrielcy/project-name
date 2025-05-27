@@ -30,16 +30,15 @@ void sim7600_init(const char *command) {
 void sim7600_basic_config() {
     bool ign_st = !power_get_ignition_state();
     sim7600_init("AT+SIMEI?");
-    vTaskDelay(pdMS_TO_TICKS(1000));
     sim7600_init("AT+CICCID");
-    vTaskDelay(pdMS_TO_TICKS(1000));
     sim7600_init("AT+CGPS=1");
     sim7600_init("AT+CPSI=32");
     sim7600_init("AT+NETOPEN");
     sim7600_init("AT+CIPOPEN=0,\"TCP\",\"34.196.135.179\",5200");
     ESP_LOGI(TAG, "Ignition State: %d", ign_st);
-    sim7600_init("AT+CGNSSINFO=30");
+    sim7600_init("AT+CGNSSINFO=30"); //VALIDA LA IGNICION SI ES NECESARIO
     //sim7600_init("ATE0"); //NO REPLICA LOS COMANDOS ENVIADOS EN LAS RESPUESTAS "0"
+    sim7600_sendATCommand("AT+CPSI?");
 }
 void sim7600_reconnect_tcp_server() {
     /*vuelve boolana la funcion o valida los comandos que se ejecuten validando la respuesta

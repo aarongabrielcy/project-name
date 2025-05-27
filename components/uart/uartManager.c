@@ -99,31 +99,34 @@ static void uart_task(void *arg) {
                 switch (event) {       
                     case TRACKING_RPT:
                         //ESP_LOGI(TAG, "Evento TRAKING REPORT ~~~~~~~~~~~~~~~~~~~~~~~~");
-                        snprintf(message, sizeof(message), "STT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;0%d00000%d;00000000;1;1;0929;4.1;14.19",
+                        snprintf(message, sizeof(message), "STT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;%d%d00000%d;00000000;1;1;0929;4.1;14.19",
                         nvs_data.device_id, date_time,cpsi.cell_id, cpsi.mcc, cpsi.mnc, cpsi.lac_tac, cpsi.rxlvl_rsrp, latitud, longitud,gnss.speed, gnss.course,
-                        gnss.gps_svs, gnss.fix, tkr.tkr_course, ignition);
+                        gnss.gps_svs, gnss.fix, tkr.tkr_course, tkr.tkr_meters, ignition);
                         if(!sendToServer(message) ) {
                             ESP_LOGW(TAG, "error sending data,event:%d", TRACKING_RPT);/// para seguir usando los logs de ESP crea un enum de los TAGs para saber de que archivo viene
                             sim7600_sendATCommand("AT+CPSI?");
                         }
-                        event = ignition ?  TRACKING_RPT : DEFAULT;
+                        event = tkr.tkr_course || tkr.tkr_meters ? TRACKING_RPT : DEFAULT;
+                        //event = DEFAULT;
+                        //event = ignition ?  TRACKING_RPT : DEFAULT;
                     break;
                     case IGNITION_ON:
                         //ESP_LOGI(TAG, "Evento IGN ON ~~~~~~~~~~~~~~~~~~~~~~~~");  
-                        snprintf(message, sizeof(message), "ALT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;0000000%d;00000000;%d;;",
+                        snprintf(message, sizeof(message), "ALT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;%d%d00000%d;00000000;%d;;",
                         nvs_data.device_id, date_time,cpsi.cell_id, cpsi.mcc, cpsi.mnc, cpsi.lac_tac, cpsi.rxlvl_rsrp, latitud, longitud,gnss.speed, gnss.course,
-                        gnss.gps_svs, gnss.fix, ignition, 33);  
+                        gnss.gps_svs, gnss.fix, tkr.tkr_course, tkr.tkr_meters, ignition, 33);  
                         if(!sendToServer(message) ) {
                             ESP_LOGW(TAG, "error sending data, event:%d",IGNITION_ON);    
                             sim7600_sendATCommand("AT+CPSI?");
                         }
-                        event = TRACKING_RPT;
+                        //event = TRACKING_RPT;
+                        event = DEFAULT;
                     break;
                     case IGNITION_OFF:
                         //ESP_LOGI(TAG, "Evento IGN OFF ~~~~~~~~~~~~~~~~~~~~~~~~");
-                        snprintf(message, sizeof(message), "ALT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;0000000%d;00000000;%d;;",
+                        snprintf(message, sizeof(message), "ALT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;%d%d00000%d;00000000;%d;;",
                         nvs_data.device_id, date_time,cpsi.cell_id, cpsi.mcc, cpsi.mnc, cpsi.lac_tac, cpsi.rxlvl_rsrp, latitud, longitud,gnss.speed, gnss.course,
-                        gnss.gps_svs, gnss.fix, ignition, 34);
+                        gnss.gps_svs, gnss.fix, tkr.tkr_course, tkr.tkr_meters, ignition, 34);
                         if(!sendToServer(message) ) {
                             ESP_LOGW(TAG, "error sending data,event:%d",IGNITION_OFF);    
                             sim7600_sendATCommand("AT+CPSI?");
@@ -133,14 +136,14 @@ static void uart_task(void *arg) {
                     break;
                     case INPUT1_ON:
                         //ESP_LOGI(TAG, "Evento IGN OFF ~~~~~~~~~~~~~~~~~~~~~~~~");
-                        snprintf(message, sizeof(message), "ALT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;0000000%d;00000000;%d;;",
+                        snprintf(message, sizeof(message), "ALT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;%d%d00000%d;00000000;%d;;",
                         nvs_data.device_id, date_time,cpsi.cell_id, cpsi.mcc, cpsi.mnc, cpsi.lac_tac, cpsi.rxlvl_rsrp, latitud, longitud,gnss.speed, gnss.course,
-                        gnss.gps_svs, gnss.fix, ignition, 42);
+                        gnss.gps_svs, gnss.fix, tkr.tkr_course, tkr.tkr_meters, ignition, 42);
                         if(!sendToServer(message) ) {
                             ESP_LOGW(TAG, "error sending data,event:%d",IGNITION_OFF);    
                             sim7600_sendATCommand("AT+CPSI?");
                         }
-                        event = ignition ?  TRACKING_RPT : DEFAULT;
+                        event = DEFAULT;
                     break;
                     case KEEP_ALIVE:
                         /* Valia que el keep a live se mande solo después de la ignición */
@@ -155,8 +158,9 @@ static void uart_task(void *arg) {
                     default:
                         //ESP_LOGI(TAG, "SIN EVENTO ~~~~~~~~~~~~~~~~~~~~~~~~");
                         /** cuando se reincia en esta linea es por que el id está vacio */
-                        ESP_LOGW(TAG, "<head>\n<sys_mode>%s<oper>%s<cell_id>%s<mcc>%d<mnc>%d<lac>%s<rx_lvl>%d<date_time>%s,<lat>%s,<lon>%s,<speed>%.2f,<fix>%d,<ign>%d,<id>%s,<ccid>%s,<wifi_AP_mac>%s,<Ble Mac>%s", 
-                           cpsi.sys_mode, cpsi.oper_mode, cpsi.cell_id, cpsi.mcc, cpsi.mnc, cpsi.lac_tac, cpsi.rxlvl_rsrp, date_time, latitud, longitud, gnss.speed, gnss.fix, ignition, nvs_data.device_id, nvs_data.sim_iccid, nvs_data.wifi_ap, nvs_data.blue_addr); 
+                        ESP_LOGW(TAG, "<head>\n<sys_mode>%s<oper>%s<cell_id>%s<mcc>%d<mnc>%d<lac>%s<rx_lvl>%d<date_time>%s,<lat>%s,<lon>%s,<speed>%.2f,<fix>%d,<ign>%d,<id>%s,<ccid>%s,<wifi_AP_mac>%s,<Ble Mac>%s<tkr_course>%d,<tkr_meters>%d", 
+                           cpsi.sys_mode, cpsi.oper_mode, cpsi.cell_id, cpsi.mcc, cpsi.mnc, cpsi.lac_tac, cpsi.rxlvl_rsrp, date_time, latitud, longitud, gnss.speed, gnss.fix, ignition, nvs_data.device_id, nvs_data.sim_iccid, nvs_data.wifi_ap, 
+                           nvs_data.blue_addr, tkr.tkr_course, tkr.tkr_meters); 
                     break;
                 }  
             } else if (strstr(response, "+NETOPEN: 0") != NULL) {
@@ -178,7 +182,13 @@ static void uart_task(void *arg) {
                 
             } else if(strstr(response, "+IPCLOSE:") != NULL) {
                 ESP_LOGI(TAG, "Desconexión IPCLOSE ...");
-                sim7600_reconnect_tcp_server();
+                if(nvs_read_str("last_valid_lat", latitud, sizeof(latitud)) != NULL) {
+                            ESP_LOGI(TAG, "last_lat_NVS=%s", latitud);
+                            sim7600_reconnect_tcp_server();
+   
+                } else {
+                    uartManager_sendReadUart("AT+SIMEI?");
+                } 
             } else if(strstr(response, "+CPSI:") != NULL) { 
                 //ESP_LOGI(TAG, "validando CPSI...");
                 redService = parsePSI(response);
@@ -298,7 +308,6 @@ bool uartManager_sendReadUart(const char *command) {
             } else {
                 char *new_ccid = cleanATResponse(cleanedResponse);
                 ESP_LOGI(TAG, "SIM parseado: %s", new_ccid);
-                vTaskDelay(pdMS_TO_TICKS(5));
                 ESP_LOGI(TAG, "Longitud: %d", strlen(new_ccid));
                 if (strlen(new_ccid) == 19) {
                     ESP_LOGI(TAG, "new_ccid=>%s", new_ccid);
@@ -328,7 +337,6 @@ bool uartManager_sendReadUart(const char *command) {
                         return true;
                     }
                     nvs_save_str("device_id", formatDevID(nvs_data.imei_module) );
-                    vTaskDelay(pdMS_TO_TICKS(100));
                      if(nvs_read_str("device_id", nvs_data.device_id, sizeof(nvs_data.device_id)) != NULL ) {
                         ESP_LOGI(TAG, "DEVICE_ID#%s", nvs_data.device_id); 
                         return true;
@@ -382,6 +390,7 @@ bool uartManager_sendReadUart(const char *command) {
                     ESP_LOGI(TAG, "ERROR DEL CONEXIÓN A SERVIDOR TCP");
                     sim7600_reconnect_tcp_server();
                 }
+                event = TRACKING_RPT;
             }
             return false;
         } else if (strstr(cleanedResponse, "OK") != NULL ) { ////////// si validas solo el comando "AT" busca mejor "AT,OK"
@@ -445,15 +454,19 @@ static void system_event_handler(void *handler_arg, esp_event_base_t base, int32
             /*si llegara a ver un falso de ignición hay que validar que el envó repetitivo de comandos no afecte, ponle una validación que solo se ejecute una vez hasta que haya ignicion  OFF y viseversa*/
             ESP_LOGI(TAG, "Ignition=> ENCENDIDA"); 
             //sim7600_sendATCommand("AT+CPSI?");
-            sim7600_sendATCommand("AT+CGNSSINFO");
+            sim7600_sendATCommand("AT+CGNSSINFO=3");
+            start_tracking_report_timer();
             stop_keep_alive_timer();
+            //sim7600_sendATCommand("AT+CGNSSINFO"); // CREAR UN TIMER DE 1 MINUTO EN RELANTI
         break;
         case IGNITION_OFF:
             ignition = false;
             event = IGNITION_OFF;
             ESP_LOGI(TAG, "Ignition=> APAGADA");
-            sim7600_sendATCommand("AT+CGNSSINFO");
-            start_keep_alive_timer();     
+            sim7600_sendATCommand("AT+CGNSSINFO=30");
+            stop_tracking_report_timer();
+            start_keep_alive_timer();
+            //sim7600_sendATCommand("AT+CGNSSINFO")// ELIMINAR EL TIMER DE 1 MINUTO PERO EJECUTALO ANTES 1 VEZ
         break;
         case INPUT1_ON:
             //event = INPUT1_ON;
@@ -468,12 +481,12 @@ static void system_event_handler(void *handler_arg, esp_event_base_t base, int32
         case KEEP_ALIVE:
             event = KEEP_ALIVE;
             ESP_LOGI(TAG, "Evento KEEP_ALIVE: han pasado %d minutos", keep_alive_interval / 60000);
-            sim7600_sendATCommand("AT+CGNSSINFO");    
+            //sim7600_sendATCommand("AT+CGNSSINFO");    
         break;
         case TRACKING_RPT:
             event = TRACKING_RPT;
             ESP_LOGI(TAG, "Generando TRACKING_RPT");
-            sim7600_sendATCommand("AT+CGNSSINFO");  // o la acción que desees
+            //sim7600_sendATCommand("AT+CGNSSINFO");  // o la acción que desees
         break;
     }
 }
