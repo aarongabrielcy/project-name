@@ -172,6 +172,7 @@ static void uart_task(void *arg) {
                 char *cip = cleanData(response, "CIPOPEN");
                 if(strstr(cip, "0,0") != NULL) {
                     ESP_LOGI(TAG, "conexion a servidor tcp establecida!");
+                    event = TRACKING_RPT;
                 }
             } else if (strstr(response,"READY") != NULL || strstr(response,"+CPIN:") != NULL) {
                 ESP_LOGI(TAG, "Modulo listo para recibir comandos");
