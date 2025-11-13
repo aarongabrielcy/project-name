@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #define ANGLE_THRESHOLD 15.0  // Umbral de cambio de ángulo
-#define TRACKING_SPEED 200.0
+#define TRACKING_SPEED 100.0
 //extern bool reportFastMode;
 //extern int timeReport = 30;
 

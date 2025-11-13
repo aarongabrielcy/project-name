@@ -2,7 +2,7 @@
 #define SERIAL_CONSOLE_H
 
 //#define CMD_COUNT 16  // Número de comandos en la lista
-#define SERIAL_DEBUG true
+#define SERIAL_DEBUG true 
 // Lista de comandos válidos
 
 /*typedef enum {
@@ -35,7 +35,8 @@ typedef enum {
     OPCT = 19,
     PDWF = 101,
     AEWF = 102,
-    AEGP = 103 //ACTIVE GPS
+    AEGP = 103, //ACTIVE GPS
+    FWUP = 104
   } cmd_action_t;
   
   typedef enum {

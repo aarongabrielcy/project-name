@@ -7,6 +7,7 @@
 #include "eventHandler.h"
 #include "storageManager.h"
 #include "deviceManager.h"
+#include "otaManager.h"
 
 void app_main(void) {
     nvs_init();
@@ -21,5 +22,6 @@ void app_main(void) {
     out2_init();
     io_manager_init();
     device_init();
+    ota_manager_mark_valid_if_pending();
     //esp_log_level_set("uartManager", ESP_LOG_NONE);  // Desactiva logs de "uartManager"
 }

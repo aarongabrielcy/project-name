@@ -17,6 +17,7 @@
 #include "cmdsManager.h"
 #include "nvsData.h"
 #include "gnssData.h"
+#include "otaManager.h"
 
 #define EPSILON 0.0001
 
@@ -32,6 +33,7 @@ bool redService = false;
 bool configState = false;
 int event = DEFAULT;
 static int keep_alive_interval = 600000; // Valor en milisegundos (10 minutos)
+volatile bool uart_task_enabled = true;
 
 void uart_init() {
     uart_config_t uart_config = {
@@ -50,9 +52,18 @@ static void uart_task(void *arg) {
     char message[256];
     ESP_LOGI(TAG, "Leyendo eventos del modulo SIM...");
     while (1) {
-        int len = uartManager_readEvent(response, sizeof(response));
+        if (!uart_task_enabled) {
+            vTaskDelay(pdMS_TO_TICKS(50));  // Esperar mientras está deshabilitado
+            continue;
+        }
+        int len = uartManager_readEvent(response, sizeof(response), 100);
         //////////// DEJAR FIJO EL TIEMPO DE REPORTE HAYA O NO HAYA IGNICIÓN ON, PERO EL EVENTO NO SE EMITE, SE GENERA EL EVENTO DEFAULT
         if (len > 0) {      
+         // Limpiar la respuesta
+            /*char *task_response = cleanResponse(response);
+            if (task_response == NULL) {
+                ESP_LOGE(TAG, "task response retornó NULL");
+            }*/
             if (strstr(response, "+CGNSSINFO:") != NULL ) {
                 //ESP_LOGI(TAG, "Evento GNSS detectado.");
                 if (parseGPS(response) ) {
@@ -183,13 +194,7 @@ static void uart_task(void *arg) {
                 
             } else if(strstr(response, "+IPCLOSE:") != NULL) {
                 ESP_LOGI(TAG, "Desconexión IPCLOSE ...");
-                if(nvs_read_str("last_valid_lat", latitud, sizeof(latitud)) != NULL) {
-                            ESP_LOGI(TAG, "last_lat_NVS=%s", latitud);
-                            sim7600_reconnect_tcp_server();
-   
-                } else {
-                    uartManager_sendReadUart("AT+SIMEI?");
-                } 
+                sim7600_reconnect_tcp_server(); 
             } else if(strstr(response, "+CPSI:") != NULL) { 
                 //ESP_LOGI(TAG, "validando CPSI...");
                 redService = parsePSI(response);
@@ -232,6 +237,15 @@ static void uart_task(void *arg) {
                 char * sms_long = cleanResponse(response);
                 parseSMS(sms_long);
 
+            } else if(strstr(response, "+HTTPACTION:") != NULL) {
+                char *sizeBinary =  cleanATResponse(response);
+                if (sizeBinary != NULL) {
+                    ESP_LOGI(TAG, "Size Binary:%s", sizeBinary);
+                    initUpdate(sizeBinary);
+                }
+            } else if(strstr(response, "+HTTPREAD:") != NULL) {
+                ESP_LOGI(TAG, "RESPONSE HTTP:%s", response);
+                
             } else if(strstr(response, "PB DONE") != NULL) {
                 ESP_LOGI(TAG, "REACTIVANDO TRAKER REPORT: %s", response);
                 sim7600_sendATCommand("AT+CGPS=1");
@@ -243,8 +257,12 @@ static void uart_task(void *arg) {
         set_gnss_led_state(gnss.fix);
     }
 }
-int uartManager_readEvent(char *buffer, int max_length) {
-    int len = uart_read_bytes(UART_SIM, (uint8_t *)buffer, max_length - 1, pdMS_TO_TICKS(100));
+int uartManager_readBinary(uint8_t *buffer, int max_length, int timeout_ms) {
+    uart_task_enabled = false;
+    return uart_read_bytes(UART_SIM, buffer, max_length, pdMS_TO_TICKS(timeout_ms));
+}
+int uartManager_readEvent(char *buffer, int max_length, int timeout_ms) {
+    int len = uart_read_bytes(UART_SIM, (uint8_t *)buffer, max_length - 1, pdMS_TO_TICKS(timeout_ms));
     if (len > 0) {
         buffer[len] = '\0';
     }
@@ -256,12 +274,13 @@ void uartManager_sendCommand(const char *command) {
 }
 bool uartManager_sendReadUart(const char *command) {
     char response[BUF_SIZE];
-    memset(response, 0, sizeof(response));
+    memset(response, 0, sizeof(response));      // Limpiar buffer de recepción
+    uart_flush(UART_SIM);                       // Limpiar buffer UART
     ESP_LOGI(TAG, "Enviando comando: %s", command);
     uart_write_bytes(UART_SIM, command, strlen(command));
     uart_write_bytes(UART_SIM, "\r\n", 2);
     // Leer la respuesta del SIM7600
-    int len = uart_read_bytes(UART_SIM, (uint8_t *)response, BUF_SIZE - 1, 500 / portTICK_PERIOD_MS);
+    int len = uart_read_bytes(UART_SIM, (uint8_t *)response, BUF_SIZE - 1, pdMS_TO_TICKS(500) );
     if (len > 0) {
         response[len] = '\0';
          // Limpiar la respuesta
@@ -378,7 +397,7 @@ bool uartManager_sendReadUart(const char *command) {
         } else if (strstr(cleanedResponse,"CIPOPEN") != NULL) {
             ESP_LOGI(TAG, "READ CIPOPEN");
             return true;
-        } else if(strstr(cleanedResponse, "+CIPERROR:") != NULL) {
+        }  else if(strstr(cleanedResponse, "+CIPERROR:") != NULL) {
             sim7600_sendATCommand("AT+CPSI?");
             char *err = cleanData(response, "AT+CIPSEND=0,");
             ESP_LOGI(TAG, "ERROR TCP:%s, estdo de la red:%d", err, redService);
@@ -454,6 +473,7 @@ static void system_event_handler(void *handler_arg, esp_event_base_t base, int32
             event = IGNITION_ON;
             /*si llegara a ver un falso de ignición hay que validar que el envó repetitivo de comandos no afecte, ponle una validación que solo se ejecute una vez hasta que haya ignicion  OFF y viseversa*/
             ESP_LOGI(TAG, "Ignition=> ENCENDIDA"); 
+           uart_task_enabled = true;
             //sim7600_sendATCommand("AT+CPSI?");
             sim7600_sendATCommand("AT+CGNSSINFO=3");
             start_tracking_report_timer();

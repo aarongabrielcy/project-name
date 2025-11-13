@@ -20,7 +20,8 @@ typedef enum {
 
 void uart_init();
 void uartManager_start();
-int uartManager_readEvent(char *buffer, int max_length);
+int uartManager_readBinary(uint8_t *buffer, int max_length, int timeout_ms);
+int uartManager_readEvent(char *buffer, int max_length, int timeout_ms);
 void uartManager_sendCommand(const char *command);
 bool uartManager_sendReadUart(const char *command);
 int sendToServer(char *message);
