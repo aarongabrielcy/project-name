@@ -4,6 +4,7 @@
 #include "nvsManager.h"
 #include "esp_log.h"
 #include "nvsData.h"
+#include "sim7600.h"
 
 #define TAG "REBOOT_TRACKER"
 
@@ -16,6 +17,28 @@ void device_init(void) {
 }
 
 static void assign_nvs_data(void) {
+    if(nvs_read_str("device_id", nvs_data.device_id, sizeof(nvs_data.device_id)) != NULL){
+        ESP_LOGI(TAG, "DEV ID=%s", nvs_data.device_id);   
+    } else {
+        if(sim7600_sendReadCommand("AT+SIMEI?") ) {
+            ESP_LOGI(TAG, "Nuevo DEVICE ID guardado!");
+        }
+    }
+    if(nvs_read_str("dev_simei", nvs_data.imei_module, sizeof(nvs_data.imei_module)) != NULL){
+        ESP_LOGI(TAG, "SIM MOD=%s", nvs_data.imei_module);   
+    } else {
+        if(sim7600_sendReadCommand("AT+SIMEI?") ) {
+            ESP_LOGI(TAG, "Nuevo SIMEI guardado!");
+        }
+    }
+
+    if(nvs_read_str("sim_id", nvs_data.sim_iccid, sizeof(nvs_data.sim_iccid)) != NULL){
+        ESP_LOGI(TAG, "SIM CCID=%s", nvs_data.sim_iccid);   
+    } else {
+        if(sim7600_sendReadCommand("AT+CICCID") ) {
+            ESP_LOGI(TAG, "Nuevo CICCID guardado!");       
+        }
+    }
 
     /// valida NVS antes de inicializar si ya está guardadas en NVS retorna
     if(nvs_read_str("wifi_mac_ap", nvs_data.wifi_ap, sizeof(nvs_data.wifi_ap)) != NULL){

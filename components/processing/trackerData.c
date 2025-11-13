@@ -8,6 +8,7 @@ trackerData_t tkr = {
     .sw_ver = "1.0.1",
     .msg_type = 1,
     .tkr_course = 0,
+    .tkr_meters = 0,
     /*.in_ig_st = 3,
     .in1_state = 0,
     .out1_state = 0,*/

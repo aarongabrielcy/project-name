@@ -10,6 +10,7 @@ typedef struct {
     char sw_ver[8];      // "1.0.1"
     int msg_type;        // 1
     int tkr_course;
+    int tkr_meters;
     /*int in1_state;    // "00000100"
     int in_ig_st;
     int out1_state;   // "00001000" */

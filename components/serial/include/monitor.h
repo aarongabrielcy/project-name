@@ -2,17 +2,11 @@
 #define SERIAL_CONSOLE_H
 
 //#define CMD_COUNT 16  // Número de comandos en la lista
-#define SERIAL_DEBUG true
+#define SERIAL_DEBUG true 
 // Lista de comandos válidos
 
 /*typedef enum {
-    KLRP = 11,
-    PWMC = 12, 
-    PWMS = 13,
-    RTMS = 14,
-    RTMC = 15,
-    DRNV = 16,
-    TMRP = 17,
+    TMTR = 17,
     TKRP = 18,
     SVPT = 19,
     CLOP = 20,
@@ -34,14 +28,15 @@ typedef enum {
     RTMS = 12,
     RTMC = 13,
     SVPT = 14,
-    TMRP = 15,
-    DLBF = 16,
-    CLRP = 17,
-    RTDV = 18,
+    TMTR = 15,
+    DITR = 16,
+    DLBF = 17,
+    MRST = 18,
     OPCT = 19,
     PDWF = 101,
     AEWF = 102,
-    AEGP = 103 //ACTIVE GPS
+    AEGP = 103, //ACTIVE GPS
+    FWUP = 104
   } cmd_action_t;
   
   typedef enum {
@@ -55,7 +50,7 @@ typedef enum {
     SIID = 28,
     OPST = 29,
     PWFR = 31,
-    LVPO = 32
+    LOCA = 32
   } cmd_query_t;
 
   typedef enum {

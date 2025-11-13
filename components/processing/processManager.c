@@ -19,7 +19,6 @@ float previousCourse = -1.0;
 static double last_lat = 0.0;
 static double last_lon = 0.0;
 static double accumulated_distance_m = 0.0;
-static bool has_prev_fix = false;
 
 static bool checkSignificantCourseChange(float currentCourse);
 static double nmea_to_decimal(double val, char hemisphere);
@@ -85,36 +84,39 @@ bool parseGPS(char *response) {
     
     double lat_decimal = nmea_to_decimal(gnss.lat, gnss.ns);
     double lon_decimal = nmea_to_decimal(gnss.lon, gnss.ew);
+    tkr.tkr_meters = 0;
 
-    if (has_prev_fix) {
+    if (gnss.fix == 1 && last_lat != 0.0 && last_lon != 0.0) {
         double dist = haversine(last_lat, last_lon, lat_decimal, lon_decimal);
+        ESP_LOGI(TAG, "Distancia parcial: %.2f m", dist);
         accumulated_distance_m += dist;
-
+        ESP_LOGI(TAG, "Tracking for meters:%d", tkr.tkr_meters);
         if (accumulated_distance_m >= TRACKING_SPEED) {
             ESP_LOGI(TAG, "Avanzó 100 metros (%.2f m acumulados)", accumulated_distance_m);
             accumulated_distance_m = 0.0;
-            sim7600_sendATCommand("AT+CGNSSINFO");
+            ///sim7600_sendATCommand("AT+CGNSSINFO");
+            tkr.tkr_meters = 1;
         }
-    } else {
-        has_prev_fix = true;
     }
-
     last_lat = lat_decimal;
     last_lon = lon_decimal;
 
     if (checkSignificantCourseChange(gnss.course) && ign_st) {
         ESP_LOGI(TAG, " Envío en curva = >");
         noChangeReported = false;
-        if(sim7600_sendReadCommand("AT+CGNSSINFO=3")) { //volver dinamico
-            printf("tiempo de reporte A 2 segundoS!");
+        if(sim7600_sendReadCommand("AT+CGNSSINFO=1")) { //volver dinamico
+            printf("tiempo de reporte A 1 segundoS!");
+            //tracking_report_interval = 3000;
+            // emitir jor
         }
 
     } else if(!noChangeReported) {
         ESP_LOGI(TAG, " cambiando a reporte normal = >");
         
-         if(sim7600_sendReadCommand("AT+CGNSSINFO=30")) { //Volver dinamico
-            printf("tiempo de reporte 30 segundo!");
+         if(sim7600_sendReadCommand("AT+CGNSSINFO=3")) { //Volver dinamico
+            printf("tiempo de reporte 3 segundo!");
             noChangeReported = true;
+            //tracking_report_interval = 30000;
         }
 
     }

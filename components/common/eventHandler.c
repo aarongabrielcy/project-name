@@ -11,7 +11,7 @@ static esp_timer_handle_t keep_alive_timer = NULL;
 static uint32_t keep_alive_interval = 1200000; // 20 minutos por defecto / 10 minutos: 600000
 
 static esp_timer_handle_t tracking_report_timer = NULL;
-static uint32_t tracking_report_interval = 1000; //volver dinamico 30000 = 30 seg. 
+static uint32_t tracking_report_interval = 30000; //volver dinamico 30000 = 30 seg.  1000 = 1 seg.
 
 static void keep_alive_callback(void *arg) {
     uint32_t keep_alive_data = keep_alive_interval;

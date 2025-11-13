@@ -13,7 +13,7 @@
 #include "utilities.h"
 #include "storageManager.h"
 #include "netManager.h"
-
+#include "otaManager.h"
 #define TAG "SERIAL_CONSOLE"
 #define UART_NUM UART_NUM_0
 #define BUF_SIZE (1024)
@@ -42,7 +42,7 @@ static char *processSVPT(const char *data);
 static char *proccessCLOP(const char *data);
 static char * resetDevice(const char *value);
 static char * validatePassword(const char *password);
-
+static char * updateFirmware(const char * value);
 static void serialConsole_task(void *arg) {
     uint8_t data[BUF_SIZE];
     while (1) {
@@ -212,7 +212,7 @@ char *proccessAction(ParsedCommand *parsed) {
             return processSVPT(parsed->value);
         case CLOP:
             return proccessCLOP(parsed->value);
-        case RTDV:
+        case MRST:
             return resetDevice(parsed->value);
         case OPCT:
         if(atoi(parsed->value) == 1 ) {
@@ -289,6 +289,9 @@ char *proccessAction(ParsedCommand *parsed) {
             } else { return "ERR: The reporting time cannot be less than 10 seconds."; }
             
             return "OK";
+        case FWUP:
+
+        return updateFirmware(parsed->value);
         default:
             return "CMD ACTION NOT FOUND";
     }
@@ -324,7 +327,7 @@ char *proccessQuery(ParsedCommand *parsed) {
             } else {
                 return "ERR";  // El event loop no está disponible
             }
-        case LVPO:
+        case LOCA:
             if(nvs_read_str("last_valid_lon", lon, sizeof(lon)) != NULL) {
                 ESP_LOGI(TAG, "last_lat_NVS=%s", lon);   
             } else { return "ERR LON"; }
@@ -379,7 +382,7 @@ char *proccessQueryWithValue(ParsedCommand *parsed) {
                 sim7600_sendATCommand("AT+CGNSSINFO"); 
             }
             break;
-        case TMRP:
+        case TMTR:
             if(atoi(value) >= 5 ) {
                 char command[50];
                 snprintf(command, sizeof(command), "AT+CGNSSINFO=%s", value);
@@ -555,4 +558,23 @@ static char* validatePassword(const char *password) {
 
     return "save successfully";
     //linkzero234.
+}
+
+static char* updateFirmware(const char *value) {
+        /*sim7600_sendATCommand("AT+CGNSSINFO=0");
+        sim7600_sendATCommand("AT+CPSI=0");*/
+
+    if (!ota_prepare_http(value)) {
+        return  "Error: descarga HTTP";
+    } else {
+
+        if (ota_manager_perform_update()) {
+            esp_restart(); //reinicia hasta el modulo SIM mejor
+            return "Ok";
+        } else {
+            /*sim7600_sendATCommand("AT+CGNSSINFO=30");
+            sim7600_sendATCommand("AT+CPSI=32");*/
+            return "Error: OTA fallida";
+        }  
+    }
 }
