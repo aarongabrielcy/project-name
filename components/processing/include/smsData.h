@@ -10,7 +10,7 @@ typedef struct {
     char sms_date[20];
     char sms_time[20];
     char imei_received[20];
-    char cmd_received[20];
+    char cmd_received[200];
     char sms_flag[20];
 } smsData_t;
 

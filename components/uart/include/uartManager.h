@@ -18,6 +18,12 @@ typedef enum {
     KEEP
 } message_type_t;
 
+typedef enum{
+    UART_STATE_IDLE,
+    UART_STATE_OTA,
+    UART_STATE_PREPARE_OTA
+} uart_state_t;
+
 void uart_init();
 void uartManager_start();
 int uartManager_readBinary(uint8_t *buffer, int max_length, int timeout_ms);
@@ -26,4 +32,5 @@ void uartManager_sendCommand(const char *command);
 bool uartManager_sendReadUart(const char *command);
 int sendToServer(char *message);
 void start_event_handler_uart(void);
+void change_uart_state(uart_state_t state_uart);
 #endif

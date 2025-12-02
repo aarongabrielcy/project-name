@@ -75,11 +75,12 @@ void start_tracking_report_timer(void) {
 void stop_tracking_report_timer(void) {
     if (tracking_report_timer != NULL) {
         esp_timer_stop(tracking_report_timer);
-        esp_timer_delete(tracking_report_timer);
+        //esp_timer_delete(tracking_report_timer);
         tracking_report_timer = NULL;
         ESP_LOGI("EVENT_HANDLER", "tracking_report_timer detenido y eliminado");
     }
 }
+
 void start_keep_alive_timer(void) {
     if (keep_alive_timer != NULL) {
         ESP_LOGW("EVENT_HANDLER", "keep_alive_timer ya está en ejecución");
@@ -103,7 +104,7 @@ void start_keep_alive_timer(void) {
 void stop_keep_alive_timer(void) {
     if (keep_alive_timer != NULL) {
         esp_timer_stop(keep_alive_timer);
-        esp_timer_delete(keep_alive_timer);
+        //esp_timer_delete(keep_alive_timer);
         keep_alive_timer = NULL;
         ESP_LOGI("EVENT_HANDLER", "keep_alive_timer detenido y eliminado");
     }

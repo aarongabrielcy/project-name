@@ -71,10 +71,19 @@ void parseSMS(char *message) {
 
     ESP_LOGI(TAG, "DEV_ID:%s, PHONE:%s, RECEI_IMEI:%s, CMD:%s, FLAG:%s, AT:%s",formatDevID(dev_imei), smsData.sender_phone, smsData.imei_received, smsData.cmd_received, smsData.sms_flag, smsData.cmdat_sms);
     if(strcmp(formatDevID(dev_imei), smsData.imei_received) == 0) {
+        if (strstr(smsData.cmd_received, "104#") != NULL){
+            char *responseCMD = "startingOTA";
+            if(smsResponse(smsData.sender_phone, responseCMD ) ) {
+                vTaskDelay(pdMS_TO_TICKS(500));
+                smsDelete(smsData.cmdat_sms);
+            }
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            responseCMD = processCmd(smsData.cmd_received);
+        }else{
         char *responseCMD = processCmd(smsData.cmd_received);
-        vTaskDelay(pdMS_TO_TICKS(7000));
+        vTaskDelay(pdMS_TO_TICKS(1000));
         if(smsResponse(smsData.sender_phone, responseCMD ) ) {
-            vTaskDelay(pdMS_TO_TICKS(3000));
+            vTaskDelay(pdMS_TO_TICKS(500));
             smsDelete(smsData.cmdat_sms);
             if(strcmp(responseCMD, "18#1&RST") == 0) {
                 vTaskDelay(pdMS_TO_TICKS(2000));
@@ -84,6 +93,7 @@ void parseSMS(char *message) {
                 }
             }            
         }
+    }
     } else {ESP_LOGI(TAG,"message:%s", formatDevID(dev_imei));}
 }
 

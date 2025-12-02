@@ -14,6 +14,7 @@
 #include "storageManager.h"
 #include "netManager.h"
 #include "otaManager.h"
+
 #define TAG "SERIAL_CONSOLE"
 #define UART_NUM UART_NUM_0
 #define BUF_SIZE (1024)
@@ -561,20 +562,39 @@ static char* validatePassword(const char *password) {
 }
 
 static char* updateFirmware(const char *value) {
-        /*sim7600_sendATCommand("AT+CGNSSINFO=0");
-        sim7600_sendATCommand("AT+CPSI=0");*/
+    uart_flush(UART_NUM_1);
+    sim7600_sendATCommand("AT+CGNSSINFO=0");
+    vTaskDelay(200/portTICK_PERIOD_MS);
+    sim7600_sendATCommand("AT+CPSI=0");
+    stop_tracking_report_timer();
+    stop_keep_alive_timer();
+    change_uart_state(UART_STATE_PREPARE_OTA);
+    esp_err_t err;
+    err = ota_manager_perform_update();
+    if (err != ESP_OK){
+        ESP_LOGI(TAG, "Error en pta_manager_perform_update: %s",esp_err_to_name(err));
+        esp_restart();
+    }
 
-    if (!ota_prepare_http(value)) {
+    err = ota_prepare_http(value);
+    if (err != ESP_OK){
+        ESP_LOGI(TAG, "Error en ota_prepare_http: %s",esp_err_to_name(err));
+        esp_restart();
+    }
+
+    /*if (!ota_prepare_http(value)) {
         return  "Error: descarga HTTP";
     } else {
-
+        
         if (ota_manager_perform_update()) {
-            esp_restart(); //reinicia hasta el modulo SIM mejor
+            //esp_restart(); //reinicia hasta el modulo SIM mejor
             return "Ok";
         } else {
-            /*sim7600_sendATCommand("AT+CGNSSINFO=30");
-            sim7600_sendATCommand("AT+CPSI=32");*/
+            sim7600_sendATCommand("AT+CGNSSINFO=30");
+            sim7600_sendATCommand("AT+CPSI=32");
             return "Error: OTA fallida";
         }  
-    }
+    }*/
+    vTaskDelay(1000/portTICK_PERIOD_MS);
+    return "ERR";
 }

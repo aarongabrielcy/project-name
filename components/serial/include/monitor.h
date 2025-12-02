@@ -66,6 +66,8 @@ typedef enum {
     INVALID_END_SYMBOL = 9
 } type_command_t;
 
+
+
 void serialConsole_init();
 char *processCmd(const char *command);
 //int validCommand(const char *input);

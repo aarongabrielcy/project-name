@@ -22,6 +22,6 @@ void app_main(void) {
     out2_init();
     io_manager_init();
     device_init();
-    ota_manager_mark_valid_if_pending();
+    //ota_manager_mark_valid_if_pending();
     //esp_log_level_set("uartManager", ESP_LOG_NONE);  // Desactiva logs de "uartManager"
 }
