@@ -131,11 +131,8 @@ static void uart_task(void *arg) {
                                     sim7600_sendATCommand("AT+CPSI?");
                                 }
                                 event = tkr.tkr_course || tkr.tkr_meters ? TRACKING_RPT : DEFAULT;
-                                //event = DEFAULT;
-                                //event = ignition ?  TRACKING_RPT : DEFAULT;
                             break;
                             case IGNITION_ON:
-                                //ESP_LOGI(TAG, "Evento IGN ON ~~~~~~~~~~~~~~~~~~~~~~~~");  
                                 snprintf(message, sizeof(message), "ALT;%s;3FFFFF;95;1.0.21;1;%s;%s;%d;%d;%s;%d;%s;%s;%.2f;%.2f;%d;%d;%d%d00000%d;00000000;%d;;",
                                 nvs_data.device_id, date_time,cpsi.cell_id, cpsi.mcc, cpsi.mnc, cpsi.lac_tac, cpsi.rxlvl_rsrp, latitud, longitud,gnss.speed, gnss.course,
                                 gnss.gps_svs, gnss.fix, tkr.tkr_course, tkr.tkr_meters, ignition, 33);  
